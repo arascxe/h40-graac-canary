@@ -1,5 +1,7 @@
 # H40 GRAAC Cloudflare canary
 
+[![Deploy to Cloudflare](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https://github.com/arascxe/h40-graac-canary)
+
 Status: engineering-only source-coverage probe. No H40 promotion and no trading authority.
 
 The Worker runs once per minute and records coverage/recall for:
@@ -30,6 +32,9 @@ The repository is self-contained:
 `npm run deploy` applies the remote D1 migration through the `DB` binding and deploys the Worker. Cloudflare's supported deploy flow can automatically provision D1 for a suitable repository/template.
 
 This repository contains no Cloudflare API token or secret and no private research state.
+
+## Zero-cost rule
+Use Cloudflare Free only. If the deployment flow offers a paid upgrade, decline it; this canary is designed to remain inside the free envelope and measures its own D1 usage.
 
 ## Evaluation
 Judge only by the preregistered H40 GRAAC source-coverage criteria: latency, deterministic watermark recovery, burst overflow, provider errors/429, duplicate behavior, cross-source disagreement, actual D1/Worker free-budget use, and eligible coverage. Do not inspect or tune against later winner outcomes.
