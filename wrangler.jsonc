@@ -1,12 +1,13 @@
 {
   "$schema": "node_modules/wrangler/config-schema.json",
-  "name": "h40-graac-zero-cost-canary",
+  "name": "h40-graac-canary",
   "main": "src/entry.js",
   "compatibility_date": "2026-09-13",
   "triggers": { "crons": ["* * * * *"] },
   "d1_databases": [
     {
-      "binding": "DB"
+      "binding": "DB",
+      "database_name": "h40-graac-canary-live-20260913a"
     }
   ]
 }
