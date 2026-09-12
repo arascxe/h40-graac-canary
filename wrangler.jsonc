@@ -8,7 +8,8 @@
     {
       "binding": "DB",
       "database_name": "h40-graac-canary",
-      "database_id": "REPLACE_WITH_D1_DATABASE_ID"
+      "database_id": "00000000-0000-0000-0000-000000000000",
+      "migrations_dir": "migrations"
     }
   ]
 }
