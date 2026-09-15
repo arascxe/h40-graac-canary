@@ -35,6 +35,13 @@ PROBE_USD = 50.0
 USDC_MINT = "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v"
 JUPITER_QUOTE = "https://lite-api.jup.ag/swap/v1/quote"
 ROUTE_SLIPPAGE_BPS = 300
+KYBER_ROUTES = "https://aggregator-api.kyberswap.com"
+EVM_ROUTE_CONFIG = {
+    "eth": {"slug": "ethereum", "stable": "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48", "decimals": 6},
+    "base": {"slug": "base", "stable": "0x833589fcd6edb6e08f4c7c32d4f71b54bda02913", "decimals": 6},
+    "arbitrum": {"slug": "arbitrum", "stable": "0xaf88d065e77c8cc2239327c5edb3a432268e5831", "decimals": 6},
+    "bsc": {"slug": "bsc", "stable": "0x55d398326f99059ff775485246999027b3197955", "decimals": 18},
+}
 MAX_CANDIDATE_ENRICHMENTS = 20
 MAX_OUTCOME_REFRESHES = 20
 MAX_TRADE_REFRESHES = 20
@@ -457,6 +464,53 @@ def routed_state(buy: dict, sell: dict, probe_raw: int) -> dict:
     }
 
 
+def kyber_quote_url(network: str, input_token: str, output_token: str, amount: str) -> str:
+    cfg = EVM_ROUTE_CONFIG[network]
+    return f"{KYBER_ROUTES}/{cfg['slug']}/api/v1/routes?" + urllib.parse.urlencode({
+        "tokenIn": input_token, "tokenOut": output_token, "amountIn": amount,
+    })
+
+
+def parse_kyber_leg(result: FetchResult) -> dict:
+    payload = json.loads(result.body)
+    route = ((payload.get("data") or {}).get("routeSummary") or {})
+    if payload.get("code") != 0 or not route.get("amountOut") or not route.get("route"):
+        raise ValueError(str(payload.get("message") or "no_route"))
+    return route
+
+
+def kyber_labels(route: dict) -> list[str]:
+    return [str(leg.get("exchange") or leg.get("poolType") or "UNKNOWN")
+            for branch in route.get("route") or [] for leg in branch]
+
+
+def evm_routed_state(buy: dict, sell: dict, probe_raw: int) -> dict:
+    sell_out = int(sell["amountOut"])
+    gas_usd = sum(numeric(x.get("gasUsd")) or 0.0 for x in (buy, sell))
+    l1_usd = sum(numeric(x.get("l1FeeUsd")) or 0.0 for x in (buy, sell))
+    quoted_cost = 1.0 - sell_out / probe_raw + (gas_usd + l1_usd) / PROBE_USD
+    worst_cost = quoted_cost + 2 * ROUTE_SLIPPAGE_BPS / 10_000
+    passes = quoted_cost <= 0.03
+    return {
+        "buy_out_raw": str(buy["amountOut"]), "sell_out_usdc_raw": str(sell_out),
+        "quoted_roundtrip_cost_pct": quoted_cost, "worst_case_cost_pct": worst_cost,
+        "buy_price_impact_pct": None, "sell_price_impact_pct": None,
+        "buy_routes": kyber_labels(buy), "sell_routes": kyber_labels(sell),
+        "route_state": "ROUTED_QUOTE_PASS" if passes else "ROUTED_QUOTE_FAIL",
+        "failure_reason": None if passes else "gas_inclusive_roundtrip_cost",
+    }
+
+
+def unavailable_route(state: str, reason: str) -> dict:
+    return {
+        "buy_out_raw": None, "sell_out_usdc_raw": None,
+        "quoted_roundtrip_cost_pct": None, "worst_case_cost_pct": None,
+        "buy_price_impact_pct": None, "sell_price_impact_pct": None,
+        "buy_routes": [], "sell_routes": [], "route_state": state,
+        "failure_reason": reason,
+    }
+
+
 def leader_score(row: dict, flow: dict | None = None) -> float:
     """Ranking only; never upgrades unverifiable capital into verified capital."""
     reserve = max(row.get("reserve") or 0.0, 0.0)
@@ -719,9 +773,10 @@ def run(db_path: Path) -> dict:
     # Solana execution gate: quote a real $50 USDC -> token route, then immediately
     # feed the quoted raw token output through the reverse token -> USDC route.
     # No transaction is signed or submitted.
-    solana_members = [m for m in all_members if m["network"] == "solana"]
-    route_truncated = len(solana_members) > MAX_ROUTE_SIMULATIONS
-    solana_members = solana_members[:MAX_ROUTE_SIMULATIONS]
+    routable_members = [m for m in all_members if m["network"] == "solana" or m["network"] in EVM_ROUTE_CONFIG]
+    route_truncated = len(routable_members) > MAX_ROUTE_SIMULATIONS
+    selected_route_members = routable_members[:MAX_ROUTE_SIMULATIONS]
+    solana_members = [m for m in selected_route_members if m["network"] == "solana"]
     probe_raw = int(round(PROBE_USD * 1_000_000))
     buy_results = {}
     buy_jobs = []
@@ -757,23 +812,73 @@ def run(db_path: Path) -> dict:
                 if result.ok:
                     try:
                         sell = parse_jupiter_leg(result)
-                        route_simulations[pool_id] = routed_state(buy_results[pool_id], sell, probe_raw)
+                        route_simulations[("solana", pool_id)] = routed_state(buy_results[pool_id], sell, probe_raw)
                     except Exception as exc:
                         health[key]["ok"] = False
                         health[key]["error"] = f"parse:{type(exc).__name__}:{str(exc)[:120]}"
     for member in solana_members:
-        if member["pool_id"] not in route_simulations:
-            route_simulations[member["pool_id"]] = {
-                "buy_out_raw": None, "sell_out_usdc_raw": None,
-                "quoted_roundtrip_cost_pct": None, "worst_case_cost_pct": None,
-                "buy_price_impact_pct": None, "sell_price_impact_pct": None,
-                "buy_routes": [], "sell_routes": [], "route_state": "NO_ROUTE",
-                "failure_reason": "buy_or_sell_quote_unavailable",
-            }
+        if (member["network"], member["pool_id"]) not in route_simulations:
+            route_simulations[(member["network"], member["pool_id"])] = unavailable_route("NO_ROUTE", "buy_or_sell_quote_unavailable")
+
+    evm_members = [m for m in selected_route_members if m["network"] in EVM_ROUTE_CONFIG]
+    evm_buys = {}
+    evm_buy_jobs = []
+    for member in evm_members:
+        cfg = EVM_ROUTE_CONFIG[member["network"]]
+        raw = int(round(PROBE_USD * 10 ** cfg["decimals"]))
+        token = address_from_id(member["token_id"])
+        evm_buy_jobs.append((f"kyber_buy:{member['network']}:{member['pool_id']}",
+                             kyber_quote_url(member["network"], cfg["stable"], token, str(raw))))
+    if evm_buy_jobs:
+        with concurrent.futures.ThreadPoolExecutor(max_workers=2) as ex:
+            futures = {ex.submit(curl_fetch, key, url): key for key, url in evm_buy_jobs}
+            for future in concurrent.futures.as_completed(futures):
+                result, key = future.result(), futures[future]
+                health[key] = {"ok": result.ok, "http": result.http_code, "seconds": round(result.seconds, 3), "error": result.error}
+                if result.ok:
+                    try:
+                        _, network, pool_id = key.split(":", 2)
+                        evm_buys[(network, pool_id)] = parse_kyber_leg(result)
+                    except Exception as exc:
+                        health[key]["ok"] = False
+                        health[key]["error"] = f"parse:{type(exc).__name__}:{str(exc)[:120]}"
+    evm_sell_jobs = []
+    for member in evm_members:
+        buy = evm_buys.get((member["network"], member["pool_id"]))
+        if buy:
+            cfg = EVM_ROUTE_CONFIG[member["network"]]
+            token = address_from_id(member["token_id"])
+            evm_sell_jobs.append((f"kyber_sell:{member['network']}:{member['pool_id']}",
+                                  kyber_quote_url(member["network"], token, cfg["stable"], str(buy["amountOut"]))))
+    if evm_sell_jobs:
+        with concurrent.futures.ThreadPoolExecutor(max_workers=2) as ex:
+            futures = {ex.submit(curl_fetch, key, url): key for key, url in evm_sell_jobs}
+            for future in concurrent.futures.as_completed(futures):
+                result, key = future.result(), futures[future]
+                _, network, pool_id = key.split(":", 2)
+                health[key] = {"ok": result.ok, "http": result.http_code, "seconds": round(result.seconds, 3), "error": result.error}
+                if result.ok:
+                    try:
+                        sell = parse_kyber_leg(result)
+                        cfg = EVM_ROUTE_CONFIG[network]
+                        raw = int(round(PROBE_USD * 10 ** cfg["decimals"]))
+                        route_simulations[(network, pool_id)] = evm_routed_state(evm_buys[(network, pool_id)], sell, raw)
+                    except Exception as exc:
+                        health[key]["ok"] = False
+                        health[key]["error"] = f"parse:{type(exc).__name__}:{str(exc)[:120]}"
+    for member in evm_members:
+        if (member["network"], member["pool_id"]) not in route_simulations:
+            route_simulations[(member["network"], member["pool_id"])] = unavailable_route("NO_ROUTE", "buy_or_sell_quote_unavailable")
+    selected_keys = {(m["network"], m["pool_id"]) for m in selected_route_members}
+    for member in all_members:
+        if member["network"] not in EVM_ROUTE_CONFIG and member["network"] != "solana":
+            route_simulations[(member["network"], member["pool_id"])] = unavailable_route("ROUTER_UNSUPPORTED", "no_admitted_public_roundtrip_router")
+        elif (member["network"], member["pool_id"]) not in selected_keys:
+            route_simulations[(member["network"], member["pool_id"])] = unavailable_route("CAPACITY_SKIPPED", "route_simulation_cap")
     if route_truncated:
         health["route_simulation_capacity"] = {
             "ok": False, "http": 0, "seconds": 0.0,
-            "error": f"more than {MAX_ROUTE_SIMULATIONS} frozen Solana pools",
+            "error": f"more than {MAX_ROUTE_SIMULATIONS} routable frozen pools",
         }
 
     observations = []
@@ -791,7 +896,7 @@ def run(db_path: Path) -> dict:
             if row:
                 info = dict(zip(("holders_count", "top10_pct", "mint_authority", "freeze_authority", "honeypot"), row))
         impact = estimated_cpmm_impact(pool.get("reserve"))
-        route = route_simulations.get(member["pool_id"])
+        route = route_simulations.get((member["network"], member["pool_id"]))
         if route:
             execution = route["route_state"]
         else:
