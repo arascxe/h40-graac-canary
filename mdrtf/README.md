@@ -9,6 +9,8 @@ artifact per hourly job. Artifacts expire after seven days. No Telegram or
 other notification is emitted.
 
 Capital remains locked. `ROUTED_QUOTE_PASS` means only that a public Jupiter
-route existed for a simulated `$50` USDC buy and immediate reverse sell inside
-the declared cost and price-impact bounds. It is not a signed transaction,
+(Solana) or Kyber (Ethereum/Base/Arbitrum/BSC) route existed for a simulated
+`$50` stablecoin buy and immediate reverse sell inside the declared cost bounds.
+Robinhood Chain and Monad cannot pass execution until an admitted public
+round-trip router exists. A route result is not a signed transaction,
 contract-safety proof, or permission to trade.
