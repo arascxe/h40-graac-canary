@@ -16,7 +16,9 @@ permissions:
 
 concurrency:
   group: mdrtf-future-only-runtime
-  cancel-in-progress: false
+  # A code deployment supersedes an older binary; scheduled runs never cancel
+  # an active collection window.
+  cancel-in-progress: ${{ github.event_name == 'push' }}
 
 jobs:
   collect:
