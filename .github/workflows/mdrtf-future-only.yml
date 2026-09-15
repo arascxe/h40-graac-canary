@@ -1,0 +1,77 @@
+name: MDRTF Future-Only Runtime
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "mdrtf/**"
+      - ".github/workflows/mdrtf-future-only.yml"
+  schedule:
+    - cron: "0 * * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: read
+
+concurrency:
+  group: mdrtf-future-only-runtime
+  cancel-in-progress: false
+
+jobs:
+  collect:
+    runs-on: ubuntu-latest
+    timeout-minutes: 65
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Restore latest future-only state
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          mkdir -p runtime
+          previous_run="$(gh run list --workflow mdrtf-future-only.yml --status success --limit 1 --json databaseId --jq '.[0].databaseId // empty')"
+          if [ -n "$previous_run" ]; then
+            gh run download "$previous_run" -n mdrtf-state -D runtime || true
+          fi
+
+      - name: Collect 38 prospective cuts
+        run: |
+          python3 mdrtf/mdrtf_collector.py \
+            --db runtime/mdrtf_future_ledger.sqlite3 \
+            --loop --interval 90 --max-cuts 38 \
+            | tee runtime/mdrtf_run.jsonl
+
+      - name: Freeze runtime health
+        if: always()
+        run: |
+          python3 - <<'PY'
+          import datetime as dt, json, sqlite3
+          from pathlib import Path
+          path = Path("runtime/mdrtf_future_ledger.sqlite3")
+          health = {"checked_at": dt.datetime.now(dt.timezone.utc).isoformat(), "db_exists": path.exists()}
+          if path.exists():
+              conn = sqlite3.connect(path)
+              health["integrity"] = conn.execute("pragma integrity_check").fetchone()[0]
+              health["cuts"] = conn.execute("select count(*) from cuts").fetchone()[0]
+              health["latest_cut"] = conn.execute("select max(created_at) from cuts").fetchone()[0]
+              health["frozen_families"] = conn.execute("select count(*) from family_freezes").fetchone()[0]
+              health["route_simulations"] = conn.execute("select count(*) from route_simulations").fetchone()[0]
+              conn.close()
+          Path("runtime/mdrtf_health.json").write_text(json.dumps(health, indent=2), encoding="utf-8")
+          if health.get("integrity") not in (None, "ok"):
+              raise SystemExit("SQLite integrity failure")
+          PY
+
+      - name: Persist rolling seven-day state
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mdrtf-state
+          path: |
+            runtime/mdrtf_future_ledger.sqlite3
+            runtime/mdrtf_run.jsonl
+            runtime/mdrtf_health.json
+          retention-days: 7
+          compression-level: 9
+          if-no-files-found: error
