@@ -19,6 +19,7 @@ import math
 import re
 import sqlite3
 import subprocess
+import threading
 import time
 import unicodedata
 import urllib.parse
@@ -46,6 +47,7 @@ MAX_CANDIDATE_ENRICHMENTS = 20
 MAX_OUTCOME_REFRESHES = 20
 MAX_TRADE_REFRESHES = 20
 MAX_ROUTE_SIMULATIONS = 10
+GECKO_REQUEST_COOLDOWN_SECONDS = 2.1
 HT = "{https://trends.google.com/trending/rss}"
 STOP = {
     "the", "and", "for", "with", "from", "today", "season", "jr", "fc", "f.c",
@@ -63,7 +65,10 @@ class FetchResult:
     error: str = ""
 
 
-def curl_fetch(key: str, url: str, timeout: int = 20) -> FetchResult:
+_GECKO_LOCK = threading.Lock()
+
+
+def _curl_fetch_raw(key: str, url: str, timeout: int = 20) -> FetchResult:
     cmd = [
         "curl", "-sS", "--max-time", str(timeout), "-A", "MDRTF-FutureLedger/0.1",
         "--retry", "2", "--retry-delay", "3", "--retry-max-time", str(min(timeout, 18)),
@@ -85,6 +90,22 @@ def curl_fetch(key: str, url: str, timeout: int = 20) -> FetchResult:
     ok = code == 200 and bool(body)
     err = "" if ok else cp.stderr.decode("utf-8", "replace")[:200]
     return FetchResult(key, ok, body, code, seconds, err)
+
+
+def curl_fetch(key: str, url: str, timeout: int = 20) -> FetchResult:
+    """Fetch while preventing burst traffic against GeckoTerminal's public API.
+
+    All Gecko calls, including retries performed inside curl, occupy one shared
+    critical section.  This is intentionally conservative: a complete cut is
+    more valuable than shaving a few seconds and losing the final chain or a
+    candidate's token-info response to HTTP 429.
+    """
+    if "api.geckoterminal.com" not in url:
+        return _curl_fetch_raw(key, url, timeout)
+    with _GECKO_LOCK:
+        result = _curl_fetch_raw(key, url, timeout)
+        time.sleep(GECKO_REQUEST_COOLDOWN_SECONDS)
+        return result
 
 
 def utc_now() -> dt.datetime:
@@ -1035,13 +1056,45 @@ def run(db_path: Path) -> dict:
         ),
     } for o in observations if o["rank"] == 1]
 
-    coverage_complete = all(item["ok"] for item in health.values())
-    if not coverage_complete:
-        decision = "COVERAGE_INSUFFICIENT"
-    elif hype_pass:
-        decision = "REVIEW_REQUIRED"
+    trend_keys = [f"trends:{geo}" for geo in GEOS]
+    attention_sources_ok = sum(1 for key in trend_keys if health.get(key, {}).get("ok"))
+    attention_quorum = attention_sources_ok >= max(2, len(GEOS) - 1)
+    lane_coverage = {
+        network: bool(health.get(f"pools:{network}", {}).get("ok"))
+        for network in NETWORKS
+    }
+    candidate_info_keys = [f"tokeninfo:{network}:{token_id}" for network, token_id in target_pairs]
+    candidate_evaluation_complete = all(health.get(key, {}).get("ok") for key in candidate_info_keys)
+    base_keys = trend_keys + [f"pools:{network}" for network in NETWORKS] + ["fees"]
+    coverage_complete = all(health.get(key, {}).get("ok") for key in base_keys)
+    usable_lanes = [network for network, ok in lane_coverage.items() if ok]
+    if coverage_complete and candidate_evaluation_complete:
+        coverage_state = "COMPLETE"
+    elif attention_quorum and usable_lanes and candidate_evaluation_complete:
+        coverage_state = "PARTIAL_USABLE"
     else:
-        decision = "NO_TRADE"
+        coverage_state = "INSUFFICIENT"
+
+    observed_networks = {o["network"] for o in observations}
+    lane_decisions = {}
+    for network in NETWORKS:
+        if not attention_quorum:
+            lane_decisions[network] = "UNKNOWN_ATTENTION_COVERAGE"
+        elif not lane_coverage[network]:
+            lane_decisions[network] = "UNKNOWN_SOURCE_COVERAGE"
+        elif network in observed_networks:
+            lane_decisions[network] = "LEADER_REVIEW"
+        else:
+            lane_decisions[network] = "NO_TRADE_OBSERVED"
+
+    if hype_pass:
+        decision = "REVIEW_REQUIRED"
+    elif matches and not candidate_evaluation_complete:
+        decision = "CANDIDATE_COVERAGE_INSUFFICIENT"
+    elif coverage_state == "INSUFFICIENT":
+        decision = "COVERAGE_INSUFFICIENT"
+    else:
+        decision = "NO_TRADE_OBSERVED_LANES"
 
     summary = {
         "cut_id": cut_id, "capital_state": "CAPITAL_LOCKED", "sources_ok": sum(1 for h in health.values() if h["ok"]),
@@ -1052,7 +1105,10 @@ def run(db_path: Path) -> dict:
         "hype_birth_pass": hype_pass, "leader_shortlist": leader_shortlist,
         "actionable_leaders": [], "outcome_observations": len(observations),
         "primitive_scouts": [p["name"] for p in primitives],
-        "lanes": lanes, "coverage_complete": coverage_complete,
+        "lanes": lanes, "lane_coverage": lane_coverage, "lane_decisions": lane_decisions,
+        "coverage_complete": coverage_complete, "coverage_state": coverage_state,
+        "attention_sources_ok": attention_sources_ok, "attention_sources_total": len(GEOS),
+        "candidate_evaluation_complete": candidate_evaluation_complete,
         "failed_sources": sorted(k for k, item in health.items() if not item["ok"]),
         "decision": decision,
     }
