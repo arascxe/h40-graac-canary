@@ -39,6 +39,12 @@ jobs:
             gh run download "$previous_run" -n mdrtf-state -D runtime || true
           fi
 
+      - name: Verify Family Optionality Shadow contract
+        working-directory: mdrtf
+        run: |
+          python3 -m unittest -v test_family_optionality_shadow.py
+          python3 -m py_compile mdrtf_collector.py family_optionality_shadow.py
+
       - name: Collect 210 prospective cuts
         run: |
           python3 mdrtf/mdrtf_collector.py \
@@ -61,6 +67,12 @@ jobs:
               health["latest_cut"] = conn.execute("select max(created_at) from cuts").fetchone()[0]
               health["frozen_families"] = conn.execute("select count(*) from family_freezes").fetchone()[0]
               health["route_simulations"] = conn.execute("select count(*) from route_simulations").fetchone()[0]
+              tables = {row[0] for row in conn.execute("select name from sqlite_master where type='table'")}
+              health["fos_baskets"] = conn.execute("select count(*) from fos_baskets").fetchone()[0] if "fos_baskets" in tables else 0
+              health["fos_rotations"] = conn.execute("select count(*) from fos_rotations").fetchone()[0] if "fos_rotations" in tables else 0
+              health["fos_capital_state_violations"] = conn.execute(
+                  "select count(*) from fos_baskets where capital_state <> 'CAPITAL_LOCKED'"
+              ).fetchone()[0] if "fos_baskets" in tables else 0
               conn.close()
           run_path = Path("runtime/mdrtf_run.jsonl")
           rows = []
@@ -87,6 +99,7 @@ jobs:
               health.get("integrity") == "ok"
               and len(cut_times) >= 208
               and (not gaps or max(gaps) <= 300)
+              and health.get("fos_capital_state_violations", 0) == 0
           )
           Path("runtime/mdrtf_health.json").write_text(json.dumps(health, indent=2), encoding="utf-8")
           if health.get("integrity") not in (None, "ok"):

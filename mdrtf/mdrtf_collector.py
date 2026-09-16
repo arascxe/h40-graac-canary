@@ -27,6 +27,8 @@ import xml.etree.ElementTree as ET
 from dataclasses import dataclass
 from pathlib import Path
 
+from family_optionality_shadow import update_family_optionality_shadow
+
 
 GEOS = ("US", "TR", "GB", "JP", "DE")
 NETWORKS = ("solana", "robinhood", "bsc", "base", "arbitrum", "monad", "eth")
@@ -1032,6 +1034,11 @@ def run(db_path: Path) -> dict:
                  baseline_price, high, low, first3, first5, first10, firstdd, state, iso(now)),
             )
 
+    # Isolated paper-only policy. It consumes the same point-in-time observations
+    # but cannot change AFT family admission, canonical decisions, or capital state.
+    with conn:
+        fos_summary = update_family_optionality_shadow(conn, cut_id, now, observations)
+
     lanes = {}
     for network in NETWORKS:
         rows = sorted((p for p in pools if p["network"] == network), key=lambda x: x["created"], reverse=True)
@@ -1109,6 +1116,7 @@ def run(db_path: Path) -> dict:
         "coverage_complete": coverage_complete, "coverage_state": coverage_state,
         "attention_sources_ok": attention_sources_ok, "attention_sources_total": len(GEOS),
         "candidate_evaluation_complete": candidate_evaluation_complete,
+        "family_optionality_shadow": fos_summary,
         "failed_sources": sorted(k for k, item in health.items() if not item["ok"]),
         "decision": decision,
     }
