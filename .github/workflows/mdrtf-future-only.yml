@@ -7,7 +7,9 @@ on:
       - "mdrtf/**"
       - ".github/workflows/mdrtf-future-only.yml"
   schedule:
-    - cron: "0 * * * *"
+    # GitHub scheduled starts can be delayed. Each job therefore carries almost
+    # the complete six-hour window instead of collecting for only 57 minutes.
+    - cron: "0 */6 * * *"
   workflow_dispatch:
 
 permissions:
@@ -23,7 +25,7 @@ concurrency:
 jobs:
   collect:
     runs-on: ubuntu-latest
-    timeout-minutes: 65
+    timeout-minutes: 355
     steps:
       - uses: actions/checkout@v4
 
@@ -37,11 +39,11 @@ jobs:
             gh run download "$previous_run" -n mdrtf-state -D runtime || true
           fi
 
-      - name: Collect 38 prospective cuts
+      - name: Collect 210 prospective cuts
         run: |
           python3 mdrtf/mdrtf_collector.py \
             --db runtime/mdrtf_future_ledger.sqlite3 \
-            --loop --interval 90 --max-cuts 38 \
+            --loop --interval 90 --max-cuts 210 \
             | tee runtime/mdrtf_run.jsonl
 
       - name: Freeze runtime health
@@ -60,9 +62,37 @@ jobs:
               health["frozen_families"] = conn.execute("select count(*) from family_freezes").fetchone()[0]
               health["route_simulations"] = conn.execute("select count(*) from route_simulations").fetchone()[0]
               conn.close()
+          run_path = Path("runtime/mdrtf_run.jsonl")
+          rows = []
+          if run_path.exists():
+              for line in run_path.read_text(encoding="utf-8").splitlines():
+                  try:
+                      rows.append(json.loads(line))
+                  except json.JSONDecodeError:
+                      pass
+          cut_times = []
+          for row in rows:
+              raw = row.get("cut_id")
+              if raw and row.get("decision") != "SKIP_RATE_GUARD":
+                  try:
+                      cut_times.append(dt.datetime.fromisoformat(raw.replace("Z", "+00:00")))
+                  except ValueError:
+                      pass
+          gaps = [(b-a).total_seconds() for a, b in zip(cut_times, cut_times[1:])]
+          health["run_rows"] = len(rows)
+          health["scheduled_cuts"] = len(cut_times)
+          health["max_cut_gap_seconds"] = max(gaps, default=None)
+          health["decisions"] = {k: sum(r.get("decision") == k for r in rows) for k in sorted({r.get("decision") for r in rows}) if k}
+          health["operational_window_pass"] = bool(
+              health.get("integrity") == "ok"
+              and len(cut_times) >= 208
+              and (not gaps or max(gaps) <= 300)
+          )
           Path("runtime/mdrtf_health.json").write_text(json.dumps(health, indent=2), encoding="utf-8")
           if health.get("integrity") not in (None, "ok"):
               raise SystemExit("SQLite integrity failure")
+          if not health.get("operational_window_pass"):
+              raise SystemExit("Operational cadence failure")
           PY
 
       - name: Persist rolling seven-day state
