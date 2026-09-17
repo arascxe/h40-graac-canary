@@ -28,6 +28,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from family_optionality_shadow import update_family_optionality_shadow
+from public_skill_consensus import evaluate_public_skill_consensus
 
 
 GEOS = ("US", "TR", "GB", "JP", "DE")
@@ -39,6 +40,8 @@ USDC_MINT = "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v"
 JUPITER_QUOTE = "https://lite-api.jup.ag/swap/v1/quote"
 ROUTE_SLIPPAGE_BPS = 300
 KYBER_ROUTES = "https://aggregator-api.kyberswap.com"
+SOLANA_RPC = "https://api.mainnet-beta.solana.com"
+PUMP_COIN_API = "https://frontend-api-v3.pump.fun/coins"
 EVM_ROUTE_CONFIG = {
     "eth": {"slug": "ethereum", "stable": "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48", "decimals": 6},
     "base": {"slug": "base", "stable": "0x833589fcd6edb6e08f4c7c32d4f71b54bda02913", "decimals": 6},
@@ -49,6 +52,8 @@ MAX_CANDIDATE_ENRICHMENTS = 20
 MAX_OUTCOME_REFRESHES = 20
 MAX_TRADE_REFRESHES = 20
 MAX_ROUTE_SIMULATIONS = 10
+MAX_PPSC_POOL_TRADES = 1
+PPSC_SAMPLE_EVERY_CUTS = 5
 GECKO_REQUEST_COOLDOWN_SECONDS = 2.1
 HT = "{https://trends.google.com/trending/rss}"
 STOP = {
@@ -108,6 +113,77 @@ def curl_fetch(key: str, url: str, timeout: int = 20) -> FetchResult:
         result = _curl_fetch_raw(key, url, timeout)
         time.sleep(GECKO_REQUEST_COOLDOWN_SECONDS)
         return result
+
+
+def solana_rpc(method: str, params: list, timeout: int = 20) -> dict:
+    payload = json.dumps({"jsonrpc": "2.0", "id": 1, "method": method, "params": params})
+    cmd = [
+        "curl", "-sS", "--max-time", str(timeout), "-A", "MDRTF-FutureLedger/0.1",
+        "-H", "content-type: application/json", "--data-binary", payload, SOLANA_RPC,
+    ]
+    cp = subprocess.run(cmd, check=False, capture_output=True, timeout=timeout + 5)
+    if cp.returncode != 0:
+        raise RuntimeError(cp.stderr.decode("utf-8", "replace")[:160] or "rpc_transport")
+    parsed = json.loads(cp.stdout)
+    if parsed.get("error"):
+        raise RuntimeError(str(parsed["error"])[:160])
+    return parsed.get("result")
+
+
+def discover_solana_funding_root(wallet: str, max_pages: int = 5) -> dict:
+    """Find the earliest public funding transaction or fail closed.
+
+    `INDEPENDENT_VERIFIED` is emitted only when pagination reaches the complete
+    public account history. A capped or RPC-failed history remains unverified.
+    """
+    before = None
+    oldest = None
+    pages = 0
+    try:
+        while pages < max_pages:
+            config = {"limit": 1000}
+            if before:
+                config["before"] = before
+            rows = solana_rpc("getSignaturesForAddress", [wallet, config]) or []
+            pages += 1
+            if rows:
+                oldest = rows[-1].get("signature")
+                before = oldest
+            if len(rows) < 1000:
+                break
+        else:
+            return {"funding_root": None, "state": "HISTORY_TRUNCATED",
+                    "evidence": {"pages": pages, "oldest_signature": oldest}}
+        if not oldest:
+            return {"funding_root": None, "state": "NO_HISTORY",
+                    "evidence": {"pages": pages}}
+        tx = solana_rpc("getTransaction", [oldest, {
+            "encoding": "jsonParsed", "maxSupportedTransactionVersion": 0,
+        }])
+        message = (((tx or {}).get("transaction") or {}).get("message") or {})
+        keys = message.get("accountKeys") or []
+        pubkeys = [k.get("pubkey") if isinstance(k, dict) else k for k in keys]
+        signers = {k.get("pubkey") for k in keys if isinstance(k, dict) and k.get("signer")}
+        meta = (tx or {}).get("meta") or {}
+        pre, post = meta.get("preBalances") or [], meta.get("postBalances") or []
+        if wallet not in pubkeys or len(pre) != len(post) or len(pre) != len(pubkeys):
+            return {"funding_root": None, "state": "EARLIEST_TX_UNDECODABLE",
+                    "evidence": {"pages": pages, "signature": oldest}}
+        inflow = post[pubkeys.index(wallet)] - pre[pubkeys.index(wallet)]
+        funders = sorted(
+            ((pre[i] - post[i], key) for i, key in enumerate(pubkeys)
+             if key != wallet and key in signers and pre[i] > post[i]), reverse=True,
+        )
+        if inflow <= 0 or not funders:
+            return {"funding_root": None, "state": "EARLIEST_TX_NOT_FUNDING",
+                    "evidence": {"pages": pages, "signature": oldest, "wallet_delta": inflow}}
+        return {"funding_root": funders[0][1], "state": "INDEPENDENT_VERIFIED",
+                "evidence": {"pages": pages, "signature": oldest,
+                             "wallet_delta_lamports": inflow,
+                             "funder_delta_lamports": funders[0][0]}}
+    except Exception as exc:
+        return {"funding_root": None, "state": "RPC_UNVERIFIED",
+                "evidence": {"pages": pages, "error": f"{type(exc).__name__}:{str(exc)[:160]}"}}
 
 
 def utc_now() -> dt.datetime:
@@ -450,6 +526,33 @@ def parse_trade_flow(result: FetchResult, developer: str | None) -> dict:
     }
 
 
+def parse_ppsc_wallet_trades(result: FetchResult, pool: dict, developer: str | None) -> list[dict]:
+    """Normalize public pool swaps without inferring outcomes or provenance."""
+    base_token = address_from_id(pool["token_id"])
+    rows = []
+    for item in json.loads(result.body).get("data") or []:
+        a = item.get("attributes") or {}
+        kind = str(a.get("kind") or "").lower()
+        if kind == "buy" and same_address(a.get("to_token_address"), base_token):
+            amount, price = numeric(a.get("to_token_amount")), numeric(a.get("price_to_in_usd"))
+        elif kind == "sell" and same_address(a.get("from_token_address"), base_token):
+            amount, price = numeric(a.get("from_token_amount")), numeric(a.get("price_from_in_usd"))
+        else:
+            continue
+        wallet, timestamp = a.get("tx_from_address"), a.get("block_timestamp")
+        usd = numeric(a.get("volume_in_usd"))
+        if not item.get("id") or not wallet or not timestamp or not amount or not usd:
+            continue
+        rows.append({
+            "trade_id": item["id"], "network": pool["network"], "pool_id": pool["pool_id"],
+            "token_id": pool["token_id"], "wallet": wallet, "block_timestamp": timestamp,
+            "kind": kind, "token_amount": amount, "usd_value": usd,
+            "token_price_usd": price, "developer_address": developer,
+            "source": "GECKOTERMINAL_PUBLIC",
+        })
+    return rows
+
+
 def quote_url(input_mint: str, output_mint: str, amount: str) -> str:
     return JUPITER_QUOTE + "?" + urllib.parse.urlencode({
         "inputMint": input_mint, "outputMint": output_mint, "amount": amount,
@@ -619,9 +722,21 @@ def run(db_path: Path) -> dict:
     )]
     family_titles = {row[0]: row[1] for row in conn.execute("SELECT family_id,event_title FROM family_freezes")}
 
+    # PPSC observes a fixed denominator: the newest public Solana pools in each
+    # cut.  It does not seed known winners or search-ranked tokens.
+    prior_cut_count = conn.execute("SELECT COUNT(*) FROM cuts").fetchone()[0]
+    ppsc_sample_due = prior_cut_count % PPSC_SAMPLE_EVERY_CUTS == 0
+    ppsc_pool_targets = (sorted(
+        (p for p in pools if p["network"] == "solana"
+         and address_from_id(p["token_id"]).endswith("pump")),
+        key=lambda p: (p["created"], p["pool_id"]), reverse=True,
+    )[:MAX_PPSC_POOL_TRADES] if ppsc_sample_due else [])
+
     # Candidate and already-frozen tokens get auditable contract/deployer enrichment.
-    target_pairs = sorted({(m["network"], m["token_id"]) for m in matches} |
-                          {(m["network"], m["token_id"]) for m in prior_members})
+    aft_target_pairs = {(m["network"], m["token_id"]) for m in matches} | {
+        (m["network"], m["token_id"]) for m in prior_members
+    }
+    target_pairs = sorted(aft_target_pairs)
     enrichment_truncated = len(target_pairs) > MAX_CANDIDATE_ENRICHMENTS
     target_pairs = target_pairs[:MAX_CANDIDATE_ENRICHMENTS]
     info_jobs = []
@@ -650,6 +765,51 @@ def run(db_path: Path) -> dict:
             "ok": False, "http": 0, "seconds": 0.0,
             "error": f"{len(target_pairs)}+ targets exceed cap {MAX_CANDIDATE_ENRICHMENTS}",
         }
+
+    # Pump exposes the creator directly. Other launchpads remain provenance
+    # UNKNOWN rather than treating a missing Gecko developer field as clear.
+    creator_jobs = []
+    for pool in ppsc_pool_targets:
+        mint = address_from_id(pool["token_id"])
+        if mint.endswith("pump"):
+            creator_jobs.append((f"ppsc_creator:{pool['token_id']}", pool,
+                                 f"{PUMP_COIN_API}/{mint}"))
+    if creator_jobs:
+        with concurrent.futures.ThreadPoolExecutor(max_workers=2) as ex:
+            futures = {ex.submit(curl_fetch, key, url): (key, pool) for key, pool, url in creator_jobs}
+            for future in concurrent.futures.as_completed(futures):
+                result, (key, pool) = future.result(), futures[future]
+                health[key] = {"ok": result.ok, "http": result.http_code,
+                               "seconds": round(result.seconds, 3), "error": result.error}
+                if result.ok:
+                    try:
+                        creator = json.loads(result.body).get("creator")
+                        if creator:
+                            enrichments.setdefault((pool["network"], pool["token_id"]), {})["developer"] = creator
+                    except Exception as exc:
+                        health[key]["ok"] = False
+                        health[key]["error"] = f"parse:{type(exc).__name__}:{str(exc)[:120]}"
+
+    ppsc_trades = []
+    ppsc_trade_jobs = []
+    for pool in ppsc_pool_targets:
+        address = address_from_id(pool["pool_id"])
+        ppsc_trade_jobs.append((f"ppsc_trades:{pool['pool_id']}", pool,
+                                f"https://api.geckoterminal.com/api/v2/networks/solana/pools/{address}/trades"))
+    if ppsc_trade_jobs:
+        with concurrent.futures.ThreadPoolExecutor(max_workers=2) as ex:
+            futures = {ex.submit(curl_fetch, key, url): (key, pool) for key, pool, url in ppsc_trade_jobs}
+            for future in concurrent.futures.as_completed(futures):
+                result, (key, pool) = future.result(), futures[future]
+                health[key] = {"ok": result.ok, "http": result.http_code,
+                               "seconds": round(result.seconds, 3), "error": result.error}
+                if result.ok:
+                    try:
+                        developer = enrichments.get((pool["network"], pool["token_id"]), {}).get("developer")
+                        ppsc_trades.extend(parse_ppsc_wallet_trades(result, pool, developer))
+                    except Exception as exc:
+                        health[key]["ok"] = False
+                        health[key]["error"] = f"parse:{type(exc).__name__}:{str(exc)[:120]}"
 
     # Metadata links are event-specific. Visual evidence is deliberately strict:
     # only near-identical perceptual hashes count, never vague subject similarity.
@@ -796,7 +956,40 @@ def run(db_path: Path) -> dict:
     # Solana execution gate: quote a real $50 USDC -> token route, then immediately
     # feed the quoted raw token output through the reverse token -> USDC route.
     # No transaction is signed or submitted.
+    # Route PPSC pools only after three already-qualified wallets converge in
+    # this cut. This preserves API capacity for evidence-bearing candidates.
+    table_names = {row[0] for row in conn.execute("SELECT name FROM sqlite_master WHERE type='table'")}
+    qualified_wallets = {
+        row[0] for row in conn.execute(
+            "SELECT wallet FROM ppsc_wallet_qualifications WHERE network='solana' AND state='QUALIFIED'"
+        )
+    } if "ppsc_wallet_qualifications" in table_names else set()
+    ppsc_buyers = {}
+    for trade in ppsc_trades:
+        if trade["kind"] == "buy" and trade["wallet"] in qualified_wallets:
+            ppsc_buyers.setdefault(trade["pool_id"], set()).add(trade["wallet"])
+    ppsc_route_targets = [p for p in ppsc_pool_targets if len(ppsc_buyers.get(p["pool_id"], set())) >= 3]
+    for pool in ppsc_route_targets:
+        key = (pool["network"], pool["token_id"])
+        if key not in enrichments or enrichments[key].get("holders_count") is None:
+            token_id = address_from_id(pool["token_id"])
+            result = curl_fetch(f"ppsc_tokeninfo:{pool['token_id']}",
+                                f"https://api.geckoterminal.com/api/v2/networks/solana/tokens/{token_id}/info")
+            health[f"ppsc_tokeninfo:{pool['token_id']}"] = {
+                "ok": result.ok, "http": result.http_code,
+                "seconds": round(result.seconds, 3), "error": result.error,
+            }
+            if result.ok:
+                try:
+                    discovered = parse_token_info(result)
+                    discovered["developer"] = enrichments.get(key, {}).get("developer") or discovered.get("developer")
+                    enrichments[key] = discovered
+                except Exception as exc:
+                    health[f"ppsc_tokeninfo:{pool['token_id']}"]["ok"] = False
+                    health[f"ppsc_tokeninfo:{pool['token_id']}"]["error"] = f"parse:{type(exc).__name__}:{str(exc)[:120]}"
     routable_members = [m for m in all_members if m["network"] == "solana" or m["network"] in EVM_ROUTE_CONFIG]
+    known_route_keys = {(m["network"], m["pool_id"]) for m in routable_members}
+    routable_members += [p for p in ppsc_route_targets if (p["network"], p["pool_id"]) not in known_route_keys]
     route_truncated = len(routable_members) > MAX_ROUTE_SIMULATIONS
     selected_route_members = routable_members[:MAX_ROUTE_SIMULATIONS]
     solana_members = [m for m in selected_route_members if m["network"] == "solana"]
@@ -1039,6 +1232,37 @@ def run(db_path: Path) -> dict:
     with conn:
         fos_summary = update_family_optionality_shadow(conn, cut_id, now, observations)
 
+    ppsc_candidates = []
+    for pool in ppsc_pool_targets:
+        info = enrichments.get((pool["network"], pool["token_id"]), {})
+        if str(info.get("honeypot")).lower() == "true" or (info.get("top10_pct") or 0) >= 90:
+            contract = "VETO"
+        elif info.get("mint_authority") or info.get("freeze_authority"):
+            contract = "VETO"
+        elif info.get("holders_count") is None or str(info.get("honeypot", "unknown")).lower() == "unknown":
+            contract = "UNVERIFIED"
+        else:
+            contract = "PROXY_PASS"
+        route = route_simulations.get((pool["network"], pool["pool_id"])) or {}
+        ppsc_candidates.append({
+            "network": pool["network"], "pool_id": pool["pool_id"], "token_id": pool["token_id"],
+            "price_usd": pool.get("price"), "contract_state": contract,
+            "route_state": route.get("route_state", "NOT_EVALUATED"),
+        })
+    with conn:
+        ppsc_summary = evaluate_public_skill_consensus(conn, cut_id, now, ppsc_trades, ppsc_candidates)
+    ppsc_summary["sample_due"] = ppsc_sample_due
+    ppsc_summary["sampled_pools"] = len(ppsc_pool_targets)
+    ppsc_summary["fetched_trade_rows"] = len(ppsc_trades)
+    for wallet in ppsc_summary["newly_qualified_wallets"][:3]:
+        identity = discover_solana_funding_root(wallet)
+        with conn:
+            conn.execute(
+                "INSERT OR REPLACE INTO ppsc_wallet_identities VALUES (?,?,?,?,?,?)",
+                ("solana", wallet, identity["funding_root"], identity["state"],
+                 json.dumps(identity["evidence"], sort_keys=True), iso(now)),
+            )
+
     lanes = {}
     for network in NETWORKS:
         rows = sorted((p for p in pools if p["network"] == network), key=lambda x: x["created"], reverse=True)
@@ -1070,7 +1294,7 @@ def run(db_path: Path) -> dict:
         network: bool(health.get(f"pools:{network}", {}).get("ok"))
         for network in NETWORKS
     }
-    candidate_info_keys = [f"tokeninfo:{network}:{token_id}" for network, token_id in target_pairs]
+    candidate_info_keys = [f"tokeninfo:{network}:{token_id}" for network, token_id in sorted(aft_target_pairs)]
     candidate_evaluation_complete = all(health.get(key, {}).get("ok") for key in candidate_info_keys)
     base_keys = trend_keys + [f"pools:{network}" for network in NETWORKS] + ["fees"]
     coverage_complete = all(health.get(key, {}).get("ok") for key in base_keys)
@@ -1117,6 +1341,7 @@ def run(db_path: Path) -> dict:
         "attention_sources_ok": attention_sources_ok, "attention_sources_total": len(GEOS),
         "candidate_evaluation_complete": candidate_evaluation_complete,
         "family_optionality_shadow": fos_summary,
+        "persistent_public_skill_consensus": ppsc_summary,
         "failed_sources": sorted(k for k, item in health.items() if not item["ok"]),
         "decision": decision,
     }

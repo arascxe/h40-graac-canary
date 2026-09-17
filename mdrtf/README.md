@@ -19,3 +19,7 @@ contract-safety proof, or permission to trade.
 `MDRTF_FAMILY_OPTIONALITY_SHADOW_V1.md` defines the isolated paper-only early
 family basket and evidence-gated leader rotation. The shadow lane cannot alter
 canonical AFT decisions or unlock capital.
+
+`MDRTF_PERSISTENT_PUBLIC_SKILL_CONSENSUS_V1.md` defines the future-only,
+paper-only realized-wallet-skill and independent-consensus lane. It cannot use
+unverified funding roots, submit transactions, or unlock capital.
