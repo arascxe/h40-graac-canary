@@ -39,11 +39,12 @@ jobs:
             gh run download "$previous_run" -n mdrtf-state -D runtime || true
           fi
 
-      - name: Verify Family Optionality Shadow contract
+      - name: Verify shadow research contracts
         working-directory: mdrtf
         run: |
           python3 -m unittest -v test_family_optionality_shadow.py
-          python3 -m py_compile mdrtf_collector.py family_optionality_shadow.py
+          python3 -m unittest -v test_public_skill_consensus.py
+          python3 -m py_compile mdrtf_collector.py family_optionality_shadow.py public_skill_consensus.py
 
       - name: Collect 210 prospective cuts
         run: |
@@ -73,6 +74,16 @@ jobs:
               health["fos_capital_state_violations"] = conn.execute(
                   "select count(*) from fos_baskets where capital_state <> 'CAPITAL_LOCKED'"
               ).fetchone()[0] if "fos_baskets" in tables else 0
+              health["ppsc_raw_trades"] = conn.execute("select count(*) from ppsc_raw_trades").fetchone()[0] if "ppsc_raw_trades" in tables else 0
+              health["ppsc_qualified_wallets"] = conn.execute("select count(*) from ppsc_wallet_qualifications").fetchone()[0] if "ppsc_wallet_qualifications" in tables else 0
+              health["ppsc_paper_candidates"] = conn.execute(
+                  "select count(*) from ppsc_consensus_signals where signal_state='PAPER_PROBE_CANDIDATE'"
+              ).fetchone()[0] if "ppsc_consensus_signals" in tables else 0
+              health["ppsc_capital_state_violations"] = sum([
+                  conn.execute("select count(*) from ppsc_runtime where capital_state <> 'CAPITAL_LOCKED'").fetchone()[0] if "ppsc_runtime" in tables else 0,
+                  conn.execute("select count(*) from ppsc_wallet_qualifications where capital_state <> 'CAPITAL_LOCKED'").fetchone()[0] if "ppsc_wallet_qualifications" in tables else 0,
+                  conn.execute("select count(*) from ppsc_consensus_signals where capital_state <> 'CAPITAL_LOCKED'").fetchone()[0] if "ppsc_consensus_signals" in tables else 0,
+              ])
               conn.close()
           run_path = Path("runtime/mdrtf_run.jsonl")
           rows = []
@@ -100,6 +111,7 @@ jobs:
               and len(cut_times) >= 208
               and (not gaps or max(gaps) <= 300)
               and health.get("fos_capital_state_violations", 0) == 0
+              and health.get("ppsc_capital_state_violations", 0) == 0
           )
           Path("runtime/mdrtf_health.json").write_text(json.dumps(health, indent=2), encoding="utf-8")
           if health.get("integrity") not in (None, "ok"):
