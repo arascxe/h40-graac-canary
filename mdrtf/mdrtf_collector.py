@@ -28,6 +28,15 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from family_optionality_shadow import update_family_optionality_shadow
+from pump_future_census import (
+    census_totals,
+    ingest_launch_snapshot,
+    ingest_trade_refresh,
+    parse_trade_page,
+    trade_page_url,
+    trade_targets,
+)
+from pump_realtime_stream import PumpRealtimeStream, ingest_stream_snapshot
 from public_skill_consensus import evaluate_public_skill_consensus
 
 
@@ -42,6 +51,8 @@ ROUTE_SLIPPAGE_BPS = 300
 KYBER_ROUTES = "https://aggregator-api.kyberswap.com"
 SOLANA_RPC = "https://api.mainnet-beta.solana.com"
 PUMP_COIN_API = "https://frontend-api-v3.pump.fun/coins"
+PUMP_LAUNCH_PAGE_SIZE = 70
+PUMP_LAUNCH_PAGES = 3
 EVM_ROUTE_CONFIG = {
     "eth": {"slug": "ethereum", "stable": "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48", "decimals": 6},
     "base": {"slug": "base", "stable": "0x833589fcd6edb6e08f4c7c32d4f71b54bda02913", "decimals": 6},
@@ -54,6 +65,11 @@ MAX_TRADE_REFRESHES = 20
 MAX_ROUTE_SIMULATIONS = 10
 MAX_PPSC_POOL_TRADES = 1
 PPSC_SAMPLE_EVERY_CUTS = 5
+MAX_PUMP_TRADE_TARGETS = 18
+MAX_PUMP_TRADE_PAGES = 3
+PUMP_TRADE_WORKERS = 6
+PUMP_TRADE_PAGE_COOLDOWN_SECONDS = 1.0
+PUMP_SWAP_MIN_START_INTERVAL_SECONDS = 3.1
 GECKO_REQUEST_COOLDOWN_SECONDS = 2.1
 HT = "{https://trends.google.com/trending/rss}"
 STOP = {
@@ -73,6 +89,8 @@ class FetchResult:
 
 
 _GECKO_LOCK = threading.Lock()
+_PUMP_SWAP_LOCK = threading.Lock()
+_PUMP_SWAP_NEXT_START = 0.0
 
 
 def _curl_fetch_raw(key: str, url: str, timeout: int = 20) -> FetchResult:
@@ -113,6 +131,17 @@ def curl_fetch(key: str, url: str, timeout: int = 20) -> FetchResult:
         result = _curl_fetch_raw(key, url, timeout)
         time.sleep(GECKO_REQUEST_COOLDOWN_SECONDS)
         return result
+
+
+def pump_swap_fetch(key: str, url: str, timeout: int = 25) -> FetchResult:
+    """Space first-party swap requests so workers cannot create a burst."""
+    global _PUMP_SWAP_NEXT_START
+    with _PUMP_SWAP_LOCK:
+        wait = _PUMP_SWAP_NEXT_START - time.monotonic()
+        if wait > 0:
+            time.sleep(wait)
+        _PUMP_SWAP_NEXT_START = time.monotonic() + PUMP_SWAP_MIN_START_INTERVAL_SECONDS
+    return _curl_fetch_raw(key, url, timeout)
 
 
 def solana_rpc(method: str, params: list, timeout: int = 20) -> dict:
@@ -184,6 +213,48 @@ def discover_solana_funding_root(wallet: str, max_pages: int = 5) -> dict:
     except Exception as exc:
         return {"funding_root": None, "state": "RPC_UNVERIFIED",
                 "evidence": {"pages": pages, "error": f"{type(exc).__name__}:{str(exc)[:160]}"}}
+
+
+def fetch_pump_trade_pages(target: dict, max_pages: int = MAX_PUMP_TRADE_PAGES) -> dict:
+    """Fetch toward the prior head; never claim coverage merely from one page."""
+    pages, cursor, reached_end = [], "0", False
+    prior_head = target.get("previous_head")
+    total_seconds = 0.0
+    for page_number in range(max_pages):
+        result = pump_swap_fetch(
+            f"pump_trades:{target['mint']}:{page_number}",
+            trade_page_url(target["mint"], cursor),
+            timeout=25,
+        )
+        total_seconds += result.seconds
+        if not result.ok:
+            return {
+                "target": target, "pages": pages, "reached_end": False,
+                "http_state": f"HTTP_{result.http_code or 0}", "http_code": result.http_code,
+                "seconds": total_seconds, "error": result.error or "trade_source_failed",
+            }
+        try:
+            rows, next_cursor, has_more = parse_trade_page(result.body)
+        except Exception as exc:
+            return {
+                "target": target, "pages": pages, "reached_end": False,
+                "http_state": "PARSE_ERROR", "http_code": result.http_code,
+                "seconds": total_seconds,
+                "error": f"parse:{type(exc).__name__}:{str(exc)[:120]}",
+            }
+        pages.append(rows)
+        ids = {str(row.get("slotIndexId") or row.get("tx") or "") for row in rows}
+        if prior_head and prior_head in ids:
+            break
+        if not has_more or not next_cursor:
+            reached_end = True
+            break
+        cursor = next_cursor
+        time.sleep(PUMP_TRADE_PAGE_COOLDOWN_SECONDS)
+    return {
+        "target": target, "pages": pages, "reached_end": reached_end,
+        "http_state": "OK", "http_code": 200, "seconds": total_seconds, "error": "",
+    }
 
 
 def utc_now() -> dt.datetime:
@@ -663,7 +734,7 @@ def outcome_state(first_10x_at: str | None, first_dd35_at: str | None) -> str:
     return "OPEN"
 
 
-def run(db_path: Path) -> dict:
+def run(db_path: Path, pump_stream: PumpRealtimeStream | None = None) -> dict:
     now, cut_id = utc_now(), iso(utc_now())
     conn = init_db(db_path)
     last_row = conn.execute("SELECT created_at FROM cuts ORDER BY created_at DESC LIMIT 1").fetchone()
@@ -677,13 +748,31 @@ def run(db_path: Path) -> dict:
                 "seconds_since_last_cut": elapsed,
                 "minimum_cut_interval_seconds": MIN_CUT_INTERVAL_SECONDS,
             }
+    prior_cut_count = conn.execute("SELECT COUNT(*) FROM cuts").fetchone()[0]
+    secondary_networks = tuple(network for network in NETWORKS if network != "solana")
+    scheduled_pool_lanes = {
+        "solana", secondary_networks[prior_cut_count % len(secondary_networks)]
+    }
     jobs = []
     for geo in GEOS:
         url = "https://trends.google.com/trending/rss?" + urllib.parse.urlencode({"geo": geo})
         jobs.append((f"trends:{geo}", url))
     for network in NETWORKS:
+        if network not in scheduled_pool_lanes:
+            continue
         jobs.append((f"pools:{network}", f"https://api.geckoterminal.com/api/v2/networks/{network}/new_pools?page=1"))
     jobs.append(("fees", "https://api.llama.fi/overview/fees?excludeTotalDataChart=true&excludeTotalDataChartBreakdown=true&dataType=dailyFees"))
+    for page in range(PUMP_LAUNCH_PAGES):
+        jobs.append((
+            f"pump_launches:{page}",
+            PUMP_COIN_API + "?" + urllib.parse.urlencode({
+                "offset": page * PUMP_LAUNCH_PAGE_SIZE,
+                "limit": PUMP_LAUNCH_PAGE_SIZE,
+                "sort": "created_timestamp",
+                "order": "DESC",
+                "includeNsfw": "true",
+            }),
+        ))
 
     with concurrent.futures.ThreadPoolExecutor(max_workers=4) as ex:
         futures = {ex.submit(curl_fetch, key, url): key for key, url in jobs}
@@ -705,6 +794,70 @@ def run(db_path: Path) -> dict:
             health[key]["ok"] = False
             health[key]["error"] = f"parse:{type(exc).__name__}:{str(exc)[:120]}"
 
+    pump_pages = [fetched.get(f"pump_launches:{page}") for page in range(PUMP_LAUNCH_PAGES)]
+    pump_page_error = ""
+    combined_launches = {}
+    if all(result and result.ok for result in pump_pages):
+        try:
+            for result in pump_pages:
+                for row in json.loads(result.body):
+                    if isinstance(row, dict) and row.get("mint"):
+                        combined_launches[str(row["mint"])] = row
+        except Exception as exc:
+            pump_page_error = f"parse:{type(exc).__name__}:{str(exc)[:120]}"
+    else:
+        pump_page_error = "one_or_more_launch_pages_failed"
+    pump_source = FetchResult(
+        "pump_launches", not pump_page_error and bool(combined_launches),
+        json.dumps(list(combined_launches.values()), ensure_ascii=False).encode(),
+        200 if not pump_page_error else next(
+            (result.http_code for result in pump_pages if result and not result.ok), 0
+        ),
+        max((result.seconds for result in pump_pages if result), default=0.0),
+        pump_page_error,
+    )
+    health["pump_launches"] = {
+        "ok": pump_source.ok, "http": pump_source.http_code,
+        "seconds": round(pump_source.seconds, 3), "error": pump_source.error,
+    }
+    pump_launch_summary = ingest_launch_snapshot(
+        conn, cut_id, now, ok=pump_source.ok, http_code=pump_source.http_code,
+        body=pump_source.body, error=pump_source.error,
+    )
+    pump_targets = trade_targets(conn, now, MAX_PUMP_TRADE_TARGETS)
+    pump_trade_refreshes, pump_ppsc_trades = [], []
+    if pump_targets:
+        with concurrent.futures.ThreadPoolExecutor(max_workers=PUMP_TRADE_WORKERS) as ex:
+            futures = {ex.submit(fetch_pump_trade_pages, target): target for target in pump_targets}
+            for future in concurrent.futures.as_completed(futures):
+                fetched_trade = future.result()
+                target = fetched_trade["target"]
+                refresh, normalized = ingest_trade_refresh(
+                    conn, cut_id, utc_now(), target, fetched_trade["pages"],
+                    reached_end=fetched_trade["reached_end"],
+                    http_state=fetched_trade["http_state"], error=fetched_trade["error"],
+                )
+                pump_trade_refreshes.append(refresh)
+                pump_ppsc_trades.extend(normalized)
+                health[f"pump_trades:{target['mint']}"] = {
+                    "ok": fetched_trade["http_state"] == "OK",
+                    "http": fetched_trade["http_code"],
+                    "seconds": round(fetched_trade["seconds"], 3),
+                    "error": fetched_trade["error"],
+                }
+    pump_census_summary = {
+        **pump_launch_summary,
+        **census_totals(conn),
+        "trade_targets": len(pump_targets),
+        "trade_refresh_states": {
+            state: sum(row["coverage_state"] == state for row in pump_trade_refreshes)
+            for state in sorted({row["coverage_state"] for row in pump_trade_refreshes})
+        },
+        "new_trade_rows_this_cut": sum(row["inserted_trades"] for row in pump_trade_refreshes),
+        "program_id": "6EF8rrecthR5Dkzon8Nwu78hRvfCKubJ14M5uBEwF6P",
+        "paper_only": True,
+    }
+
     matches = []
     for event in events:
         for pool in pools:
@@ -722,9 +875,8 @@ def run(db_path: Path) -> dict:
     )]
     family_titles = {row[0]: row[1] for row in conn.execute("SELECT family_id,event_title FROM family_freezes")}
 
-    # PPSC observes a fixed denominator: the newest public Solana pools in each
-    # cut.  It does not seed known winners or search-ranked tokens.
-    prior_cut_count = conn.execute("SELECT COUNT(*) FROM cuts").fetchone()[0]
+    # PPSC consumes the outcome-blind Pump launch census plus a legacy public
+    # Solana pool canary. It never seeds known winners or search-ranked tokens.
     ppsc_sample_due = prior_cut_count % PPSC_SAMPLE_EVERY_CUTS == 0
     ppsc_pool_targets = (sorted(
         (p for p in pools if p["network"] == "solana"
@@ -790,7 +942,7 @@ def run(db_path: Path) -> dict:
                         health[key]["ok"] = False
                         health[key]["error"] = f"parse:{type(exc).__name__}:{str(exc)[:120]}"
 
-    ppsc_trades = []
+    ppsc_trades = list(pump_ppsc_trades)
     ppsc_trade_jobs = []
     for pool in ppsc_pool_targets:
         address = address_from_id(pool["pool_id"])
@@ -1249,8 +1401,22 @@ def run(db_path: Path) -> dict:
             "price_usd": pool.get("price"), "contract_state": contract,
             "route_state": route.get("route_state", "NOT_EVALUATED"),
         })
+    existing_ppsc_candidates = {(row["network"], row["token_id"]) for row in ppsc_candidates}
+    for target in pump_targets:
+        token_id = f"solana_{target['mint']}"
+        if ("solana", token_id) in existing_ppsc_candidates:
+            continue
+        latest = conn.execute(
+            "SELECT token_price_usd FROM pump_raw_trades WHERE mint=? AND token_price_usd IS NOT NULL "
+            "ORDER BY block_timestamp DESC,trade_id DESC LIMIT 1", (target["mint"],),
+        ).fetchone()
+        ppsc_candidates.append({
+            "network": "solana", "pool_id": f"solana_{target['pool_address']}",
+            "token_id": token_id, "price_usd": latest[0] if latest else None,
+            "contract_state": "UNVERIFIED", "route_state": "NOT_EVALUATED",
+        })
     with conn:
-        ppsc_summary = evaluate_public_skill_consensus(conn, cut_id, now, ppsc_trades, ppsc_candidates)
+        ppsc_summary = evaluate_public_skill_consensus(conn, cut_id, utc_now(), ppsc_trades, ppsc_candidates)
     ppsc_summary["sample_due"] = ppsc_sample_due
     ppsc_summary["sampled_pools"] = len(ppsc_pool_targets)
     ppsc_summary["fetched_trade_rows"] = len(ppsc_trades)
@@ -1262,6 +1428,28 @@ def run(db_path: Path) -> dict:
                 ("solana", wallet, identity["funding_root"], identity["state"],
                  json.dumps(identity["evidence"], sort_keys=True), iso(now)),
             )
+
+    if pump_stream is not None:
+        stream_snapshot = pump_stream.snapshot()
+        with conn:
+            pump_stream_summary = ingest_stream_snapshot(conn, cut_id, utc_now(), stream_snapshot)
+        health["pump_realtime_stream"] = {
+            "ok": pump_stream_summary["coverage_state"] == "RAW_CAPTURE_ACTIVE",
+            "http": 0, "seconds": 0.0,
+            "error": pump_stream_summary.get("error") or (
+                "" if pump_stream_summary["coverage_state"] == "RAW_CAPTURE_ACTIVE"
+                else pump_stream_summary["coverage_state"]
+            ),
+        }
+    else:
+        pump_stream_summary = {
+            "version": "PUMP_REALTIME_STREAM_V1_20260918",
+            "coverage_state": "NOT_ENABLED", "connected": False,
+            "events_seen": 0, "events_inserted": 0,
+            "creation_events": 0, "trade_events": 0,
+            "dropped_events": 0, "capital_state": "CAPITAL_LOCKED",
+            "schema_state": "RAW_UNVALIDATED",
+        }
 
     lanes = {}
     for network in NETWORKS:
@@ -1337,11 +1525,14 @@ def run(db_path: Path) -> dict:
         "actionable_leaders": [], "outcome_observations": len(observations),
         "primitive_scouts": [p["name"] for p in primitives],
         "lanes": lanes, "lane_coverage": lane_coverage, "lane_decisions": lane_decisions,
+        "scheduled_pool_lanes": sorted(scheduled_pool_lanes),
         "coverage_complete": coverage_complete, "coverage_state": coverage_state,
         "attention_sources_ok": attention_sources_ok, "attention_sources_total": len(GEOS),
         "candidate_evaluation_complete": candidate_evaluation_complete,
         "family_optionality_shadow": fos_summary,
         "persistent_public_skill_consensus": ppsc_summary,
+        "pump_future_census": pump_census_summary,
+        "pump_realtime_stream": pump_stream_summary,
         "failed_sources": sorted(k for k, item in health.items() if not item["ok"]),
         "decision": decision,
     }
@@ -1356,24 +1547,29 @@ def main() -> None:
                         help=f"seconds between completed cuts (minimum {MIN_CUT_INTERVAL_SECONDS})")
     parser.add_argument("--max-cuts", type=int, default=0, help="stop after N loop cuts; 0 means unlimited")
     args = parser.parse_args()
-    if not args.loop:
-        print(json.dumps(run(args.db.resolve()), ensure_ascii=False, indent=2, sort_keys=True))
-        return
-    interval = max(args.interval, MIN_CUT_INTERVAL_SECONDS)
-    completed = 0
-    while not args.max_cuts or completed < args.max_cuts:
-        started = time.monotonic()
-        try:
-            result = run(args.db.resolve())
-        except Exception as exc:
-            result = {
-                "cut_id": iso(utc_now()), "capital_state": "CAPITAL_LOCKED",
-                "decision": "RUNTIME_ERROR", "error": f"{type(exc).__name__}:{str(exc)[:300]}",
-            }
-        print(json.dumps(result, ensure_ascii=False, sort_keys=True), flush=True)
-        completed += 1
-        if not args.max_cuts or completed < args.max_cuts:
-            time.sleep(max(0.0, interval - (time.monotonic() - started)))
+    pump_stream = PumpRealtimeStream()
+    pump_stream.start()
+    try:
+        if not args.loop:
+            print(json.dumps(run(args.db.resolve(), pump_stream), ensure_ascii=False, indent=2, sort_keys=True))
+            return
+        interval = max(args.interval, MIN_CUT_INTERVAL_SECONDS)
+        completed = 0
+        while not args.max_cuts or completed < args.max_cuts:
+            started = time.monotonic()
+            try:
+                result = run(args.db.resolve(), pump_stream)
+            except Exception as exc:
+                result = {
+                    "cut_id": iso(utc_now()), "capital_state": "CAPITAL_LOCKED",
+                    "decision": "RUNTIME_ERROR", "error": f"{type(exc).__name__}:{str(exc)[:300]}",
+                }
+            print(json.dumps(result, ensure_ascii=False, sort_keys=True), flush=True)
+            completed += 1
+            if not args.max_cuts or completed < args.max_cuts:
+                time.sleep(max(0.0, interval - (time.monotonic() - started)))
+    finally:
+        pump_stream.stop()
 
 
 if __name__ == "__main__":
