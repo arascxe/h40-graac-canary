@@ -42,15 +42,18 @@ jobs:
       - name: Verify shadow research contracts
         working-directory: mdrtf
         run: |
+          python3 -m pip install --disable-pip-version-check --quiet 'nats-py==2.11.0'
           python3 -m unittest -v test_family_optionality_shadow.py
           python3 -m unittest -v test_public_skill_consensus.py
-          python3 -m py_compile mdrtf_collector.py family_optionality_shadow.py public_skill_consensus.py
+          python3 -m unittest -v test_pump_future_census.py
+          python3 -m unittest -v test_pump_realtime_stream.py
+          python3 -m py_compile mdrtf_collector.py family_optionality_shadow.py public_skill_consensus.py pump_future_census.py pump_realtime_stream.py
 
-      - name: Collect 210 prospective cuts
+      - name: Collect 208 prospective cuts
         run: |
           python3 mdrtf/mdrtf_collector.py \
             --db runtime/mdrtf_future_ledger.sqlite3 \
-            --loop --interval 90 --max-cuts 210 \
+            --loop --interval 90 --max-cuts 208 \
             | tee runtime/mdrtf_run.jsonl
 
       - name: Freeze runtime health
@@ -84,6 +87,30 @@ jobs:
                   conn.execute("select count(*) from ppsc_wallet_qualifications where capital_state <> 'CAPITAL_LOCKED'").fetchone()[0] if "ppsc_wallet_qualifications" in tables else 0,
                   conn.execute("select count(*) from ppsc_consensus_signals where capital_state <> 'CAPITAL_LOCKED'").fetchone()[0] if "ppsc_consensus_signals" in tables else 0,
               ])
+              health["pump_future_launches"] = conn.execute("select count(*) from pump_launches").fetchone()[0] if "pump_launches" in tables else 0
+              health["pump_future_trades"] = conn.execute("select count(*) from pump_raw_trades").fetchone()[0] if "pump_raw_trades" in tables else 0
+              health["pump_complete_launch_intervals"] = conn.execute(
+                  "select count(*) from pump_census_cuts where source_state='COMPLETE_INTERVAL'"
+              ).fetchone()[0] if "pump_census_cuts" in tables else 0
+              health["pump_launch_gaps"] = conn.execute(
+                  "select count(*) from pump_census_cuts where source_state='GAP'"
+              ).fetchone()[0] if "pump_census_cuts" in tables else 0
+              health["pump_complete_trade_refreshes"] = conn.execute(
+                  "select count(*) from pump_trade_fetches where coverage_state='COMPLETE_INTERVAL'"
+              ).fetchone()[0] if "pump_trade_fetches" in tables else 0
+              health["pump_trade_gaps"] = conn.execute(
+                  "select count(*) from pump_trade_fetches where coverage_state not in ('COMPLETE_INTERVAL')"
+              ).fetchone()[0] if "pump_trade_fetches" in tables else 0
+              health["pump_capital_state_violations"] = conn.execute(
+                  "select count(*) from pump_census_runtime where capital_state <> 'CAPITAL_LOCKED'"
+              ).fetchone()[0] if "pump_census_runtime" in tables else 0
+              health["pump_stream_events"] = conn.execute("select count(*) from pump_stream_events").fetchone()[0] if "pump_stream_events" in tables else 0
+              health["pump_stream_active_cuts"] = conn.execute(
+                  "select count(*) from pump_stream_cuts where coverage_state='RAW_CAPTURE_ACTIVE'"
+              ).fetchone()[0] if "pump_stream_cuts" in tables else 0
+              health["pump_stream_buffer_gaps"] = conn.execute(
+                  "select count(*) from pump_stream_cuts where coverage_state='BUFFER_GAP'"
+              ).fetchone()[0] if "pump_stream_cuts" in tables else 0
               conn.close()
           run_path = Path("runtime/mdrtf_run.jsonl")
           rows = []
@@ -105,13 +132,41 @@ jobs:
           health["run_rows"] = len(rows)
           health["scheduled_cuts"] = len(cut_times)
           health["max_cut_gap_seconds"] = max(gaps, default=None)
+          health["on_time_cut_starts"] = (1 if cut_times else 0) + sum(
+              abs(gap - 90) <= 30 for gap in gaps
+          )
+          health["attention_quorum_cuts"] = sum(
+              r.get("attention_sources_ok", 0) >= max(2, r.get("attention_sources_total", 5) - 1)
+              for r in rows if r.get("decision") != "SKIP_RATE_GUARD"
+          )
+          health["solana_coverage_cuts"] = sum(
+              bool((r.get("lane_coverage") or {}).get("solana"))
+              for r in rows if r.get("decision") != "SKIP_RATE_GUARD"
+          )
+          required_coverage_cuts = int(len(cut_times) * 0.95 + 0.999999)
+          health["required_95pct_coverage_cuts"] = required_coverage_cuts
+          pump_states = [
+              (r.get("pump_future_census") or {}).get("coverage_state")
+              for r in rows if r.get("decision") != "SKIP_RATE_GUARD"
+          ]
+          health["pump_launch_complete_cuts"] = sum(state == "COMPLETE_INTERVAL" for state in pump_states)
+          health["pump_launch_gap_cuts"] = sum(state in {"GAP", "SOURCE_ERROR"} for state in pump_states)
+          health["pump_launch_window_pass"] = bool(
+              pump_states
+              and pump_states[0] == "BASELINE_ONLY"
+              and all(state == "COMPLETE_INTERVAL" for state in pump_states[1:])
+          )
           health["decisions"] = {k: sum(r.get("decision") == k for r in rows) for k in sorted({r.get("decision") for r in rows}) if k}
           health["operational_window_pass"] = bool(
               health.get("integrity") == "ok"
               and len(cut_times) >= 208
               and (not gaps or max(gaps) <= 300)
+              and health.get("on_time_cut_starts", 0) >= required_coverage_cuts
+              and health.get("attention_quorum_cuts", 0) >= required_coverage_cuts
+              and health.get("solana_coverage_cuts", 0) >= required_coverage_cuts
               and health.get("fos_capital_state_violations", 0) == 0
               and health.get("ppsc_capital_state_violations", 0) == 0
+              and health.get("pump_capital_state_violations", 0) == 0
           )
           Path("runtime/mdrtf_health.json").write_text(json.dumps(health, indent=2), encoding="utf-8")
           if health.get("integrity") not in (None, "ok"):
