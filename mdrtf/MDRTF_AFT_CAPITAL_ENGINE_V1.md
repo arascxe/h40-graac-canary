@@ -150,6 +150,45 @@ Thresholds and family membership are frozen before outcomes. At day seven:
 No indefinite extension is permitted. The decision window ends with an
 explicit `ADMIT`, `CLOSE`, or `DATA_TOO_SPARSE_FOR_URGENT_OBJECTIVE` result.
 
+## Pump future census and public-skill shadow lane
+
+The PPSC shadow lane must use an outcome-blind launch denominator rather than
+search-ranked or retrospectively successful tokens:
+
+- its clock starts on the first production observation and rejects every
+  launch and trade before that timestamp;
+- the first Pump launch page establishes a baseline only and is never a
+  coverage PASS;
+- later launch intervals are complete only when the first-party page overlaps
+  the prior successful request boundary; a missing overlap is a permanent
+  recorded `GAP`, not a negative example;
+- trade history comes from Pump's first-party swap API and is immutable by
+  transaction/slot identity;
+- a token refresh is complete only when it reaches the prior recorded trade
+  head, or reaches the end of history on its first post-start refresh;
+- token refreshes are scheduled oldest-due first within the frozen observation
+  window, never by outcome, popularity or later return;
+- creator trades remain excluded and funding-root independence remains
+  fail-closed;
+- the lane remains paper-only and `CAPITAL_LOCKED`; it cannot alter AFT family
+  admission or authorize a transaction.
+
+Pump's first-party global NATS subjects may be captured as an additive
+future-only firehose. Until an observed production payload schema is frozen and
+tested, those events remain `RAW_UNVALIDATED`: they may measure source health
+and preserve evidence, but may not qualify wallets, create candidates, fill
+missing REST coverage or change any decision. Buffer drops and disconnects are
+explicit gaps.
+
+Launch coverage, trade coverage and AFT operational coverage are reported
+separately. None may borrow a PASS from another lane.
+
+Solana is sampled at every cut. The remaining configured Gecko pool lanes are
+sampled in a deterministic round-robin so public rate limits cannot destroy
+the 90-second clock. An unscheduled lane is `UNKNOWN_SOURCE_COVERAGE` for that
+cut, never a negative observation; each secondary lane retains its own cadence
+and gap history.
+
 ## Explicit exclusions
 
 - no CEX lane;
@@ -160,4 +199,3 @@ explicit `ADMIT`, `CLOSE`, or `DATA_TOO_SPARSE_FOR_URGENT_OBJECTIVE` result.
 - no historical winner tuning;
 - no automatic transaction signing;
 - no alert unless a state changes to S2, S3, INVALIDATE, or operational FAIL.
-
