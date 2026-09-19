@@ -30,3 +30,9 @@ research lane. `attention_issuance_shadow.py` may identify only a
 and continuous Pump launch coverage pass without a semantic launch. Historical
 canonicality and rights remain unverified; the lane cannot deploy, sign, spend,
 promote, or unlock capital.
+
+`MDRTF_RIGHT_TAIL_ISSUER_V1.md` freezes the creator-economics measurement
+contract. `creator_economics_audit.py` reports creator-excluded external volume,
+coverage state, conservative fee bounds, concentration, and observed `$5k`
+outcomes. It cannot turn incomplete histories into negatives or authorize a
+launch.

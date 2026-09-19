@@ -48,7 +48,8 @@ jobs:
           python3 -m unittest -v test_pump_future_census.py
           python3 -m unittest -v test_pump_realtime_stream.py
           python3 -m unittest -v test_attention_issuance_shadow.py
-          python3 -m py_compile mdrtf_collector.py family_optionality_shadow.py public_skill_consensus.py pump_future_census.py pump_realtime_stream.py attention_issuance_shadow.py
+          python3 -m unittest -v test_creator_economics_audit.py
+          python3 -m py_compile mdrtf_collector.py family_optionality_shadow.py public_skill_consensus.py pump_future_census.py pump_realtime_stream.py attention_issuance_shadow.py creator_economics_audit.py
 
       - name: Collect 208 prospective cuts
         run: |
@@ -60,11 +61,22 @@ jobs:
       - name: Freeze runtime health
         if: always()
         run: |
+          python3 mdrtf/creator_economics_audit.py \
+            --db runtime/mdrtf_future_ledger.sqlite3 \
+            --out runtime/creator_economics_audit.json
           python3 - <<'PY'
           import datetime as dt, json, sqlite3
           from pathlib import Path
           path = Path("runtime/mdrtf_future_ledger.sqlite3")
           health = {"checked_at": dt.datetime.now(dt.timezone.utc).isoformat(), "db_exists": path.exists()}
+          economics_path = Path("runtime/creator_economics_audit.json")
+          if economics_path.exists():
+              economics = json.loads(economics_path.read_text(encoding="utf-8"))
+              health["creator_economics_evidence_state"] = economics.get("evidence_state")
+              health["creator_economics_complete_launches"] = economics.get("complete_launches", 0)
+              health["creator_economics_token_5k_floor_hits"] = economics.get("token_5k_hits_at_fee_floor", 0)
+              health["creator_economics_token_5k_ceiling_hits"] = economics.get("token_5k_hits_at_fee_ceiling", 0)
+              health["creator_economics_actionable_launches"] = len(economics.get("actionable_launches", []))
           if path.exists():
               conn = sqlite3.connect(path)
               health["integrity"] = conn.execute("pragma integrity_check").fetchone()[0]
@@ -203,6 +215,7 @@ jobs:
             runtime/mdrtf_future_ledger.sqlite3
             runtime/mdrtf_run.jsonl
             runtime/mdrtf_health.json
+            runtime/creator_economics_audit.json
           retention-days: 7
           compression-level: 9
           if-no-files-found: error
