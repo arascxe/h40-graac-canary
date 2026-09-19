@@ -27,6 +27,7 @@ import xml.etree.ElementTree as ET
 from dataclasses import dataclass
 from pathlib import Path
 
+from attention_issuance_shadow import evaluate_attention_issuance_shadow
 from family_optionality_shadow import update_family_optionality_shadow
 from pump_future_census import (
     census_totals,
@@ -1379,6 +1380,11 @@ def run(db_path: Path, pump_stream: PumpRealtimeStream | None = None) -> dict:
                  baseline_price, high, low, first3, first5, first10, firstdd, state, iso(now)),
             )
 
+    # Issuer-side research remains isolated and fail-closed. It can emit only a
+    # due-diligence candidate; it cannot launch, sign, spend, or change AFT.
+    with conn:
+        issuance_summary = evaluate_attention_issuance_shadow(conn, cut_id, now, events)
+
     # Isolated paper-only policy. It consumes the same point-in-time observations
     # but cannot change AFT family admission, canonical decisions, or capital state.
     with conn:
@@ -1533,6 +1539,7 @@ def run(db_path: Path, pump_stream: PumpRealtimeStream | None = None) -> dict:
         "persistent_public_skill_consensus": ppsc_summary,
         "pump_future_census": pump_census_summary,
         "pump_realtime_stream": pump_stream_summary,
+        "attention_issuance_shadow": issuance_summary,
         "failed_sources": sorted(k for k, item in health.items() if not item["ok"]),
         "decision": decision,
     }
