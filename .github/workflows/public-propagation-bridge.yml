@@ -2,7 +2,7 @@ name: Public propagation bridge
 
 on:
   schedule:
-    - cron: "*/5 * * * *"
+    - cron: "7,37 * * * *"
   workflow_dispatch:
   push:
     paths:
@@ -14,12 +14,12 @@ permissions:
 
 concurrency:
   group: public-propagation-bridge
-  cancel-in-progress: true
+  cancel-in-progress: false
 
 jobs:
   collect:
     runs-on: ubuntu-latest
-    timeout-minutes: 5
+    timeout-minutes: 35
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -27,10 +27,40 @@ jobs:
       - name: Install minimal websocket client
         run: python3 -m pip install --disable-pip-version-check --quiet "websockets>=13,<16"
 
-      - name: Collect public propagation snapshot
+      - name: Run six near-continuous propagation captures
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        shell: bash
         run: |
-          python3 propagation/collect.py --output /tmp/latest.json --duration 170
-          python3 - <<'PY'
+          set -euo pipefail
+
+          publish_snapshot () {
+            rm -rf /tmp/propagation-publish
+            mkdir -p /tmp/propagation-publish
+            cp /tmp/latest.json /tmp/propagation-publish/latest.json
+            cat > /tmp/propagation-publish/README.md <<'EOF'
+          Public, privacy-minimized propagation snapshot generated only from public sources.
+          No private system credentials, private repository data, wallet data, Telegram data,
+          Supabase credentials, user account handles, account IDs, or economic scoring thresholds
+          are stored on this data branch. Public-source actor identifiers are one-way hashed.
+          EOF
+            cd /tmp/propagation-publish
+            git init -q
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git checkout -q -b propagation-data
+            git add latest.json README.md
+            git commit -q -m "Update public propagation snapshot"
+            git remote add origin "https://x-access-token:${GITHUB_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
+            git push --force -q origin HEAD:propagation-data
+            cd "$GITHUB_WORKSPACE"
+          }
+
+          for i in 1 2 3 4 5 6; do
+            echo "capture_cycle=$i started=$(date -u +%FT%TZ)"
+            python3 propagation/collect.py --output /tmp/latest.json --duration 270
+
+            python3 - <<'PY'
           import json
           p=json.load(open('/tmp/latest.json'))
           assert p.get('schema') == 'public_social_propagation_v2'
@@ -39,25 +69,11 @@ jobs:
           assert privacy.get('private_strategy_thresholds') is False
           assert privacy.get('account_handles_stored') is False
           assert privacy.get('account_ids_stored') is False
+          assert (p.get('summary') or {}).get('independent_actor_hashes', 0) >= 0
           print(p['summary'])
           print(p['source_health'])
           PY
 
-      - name: Publish one-commit data branch
-        shell: bash
-        run: |
-          set -euo pipefail
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git checkout --orphan propagation-data-tmp
-          git rm -rf . >/dev/null 2>&1 || true
-          cp /tmp/latest.json latest.json
-          cat > README.md <<'EOF'
-          Public, privacy-minimized propagation snapshot generated only from public sources.
-          No private system credentials, private repository data, wallet data, Telegram data,
-          Supabase credentials, user account handles, account IDs, or economic scoring thresholds
-          are stored on this data branch. Public-source actor identifiers are one-way hashed.
-          EOF
-          git add latest.json README.md
-          git commit -m "Update public propagation snapshot"
-          git push --force origin HEAD:propagation-data
+            publish_snapshot
+            echo "capture_cycle=$i published=$(date -u +%FT%TZ)"
+          done
