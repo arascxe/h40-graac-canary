@@ -1,50 +1,66 @@
 #!/usr/bin/env python3
 import argparse
+import asyncio
 import hashlib
+import html
 import json
 import re
-import sys
+import time
 import urllib.parse
 import urllib.request
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 
-API = "https://public.api.bsky.app/xrpc/app.bsky.feed.searchPosts"
-UA = "public-propagation-bridge/1.0 (+github-actions)"
+import websockets
 
-QUERY_BUCKETS = [
-    ("origin_tiktok", "tiktok.com"),
-    ("origin_instagram", "instagram.com"),
-    ("origin_x", "x.com"),
-    ("viral_phrase", "\"went viral\""),
-    ("viral_phrase", "\"goes viral\""),
-    ("meme", "meme"),
-    ("remix", "remix"),
-    ("reaction", "\"reaction video\""),
+UA = "public-propagation-bridge/2.0 (+github-actions)"
+JETSTREAM = "wss://jetstream1.us-east.bsky.network/subscribe?wantedCollections=app.bsky.feed.post"
+PREVIOUS = "https://raw.githubusercontent.com/arascxe/h40-graac-canary/propagation-data/latest.json"
+
+MASTODON_TIMELINES = [
+    "https://mastodon.social/api/v1/timelines/public?limit=40",
+    "https://mastodon.world/api/v1/timelines/public?limit=40",
+    "https://mstdn.social/api/v1/timelines/public?limit=40",
+    "https://mas.to/api/v1/timelines/public?limit=40",
 ]
 
-ALLOWED_LINK_HOSTS = (
-    "tiktok.com", "www.tiktok.com",
+ALLOWED_LINK_HOSTS = {
+    "tiktok.com", "www.tiktok.com", "vm.tiktok.com",
     "instagram.com", "www.instagram.com",
-    "x.com", "twitter.com", "www.x.com", "www.twitter.com",
+    "x.com", "www.x.com", "twitter.com", "www.twitter.com",
     "youtube.com", "www.youtube.com", "youtu.be",
     "reddit.com", "www.reddit.com",
-)
+}
+
+BUCKET_PATTERNS = {
+    "origin_tiktok": ("tiktok.com",),
+    "origin_instagram": ("instagram.com",),
+    "origin_x": ("x.com/", "twitter.com/"),
+    "viral": ("went viral", "goes viral", "gone viral", "viral video", "viral clip", "breaks the internet"),
+    "meme": (" meme", "meme ", "memes", "memeable"),
+    "remix": ("remix", "remixed", "remixes"),
+    "reaction": ("reaction video", "reaction image", "reaction meme"),
+    "template": ("template", "green screen"),
+    "parody": ("parody", "spoof"),
+    "derivative": ("sticker", "fan art", "fanart", "fan account", "edit of", "edits of"),
+}
 
 URL_RE = re.compile(r"https?://[^\s<>()\]\[{}\"']+")
+HREF_RE = re.compile(r"""href=["'](https?://[^"']+)["']""", re.I)
 MENTION_RE = re.compile(r"(?<![\w.])@[A-Za-z0-9_.-]{1,64}")
 EMAIL_RE = re.compile(r"\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}\b")
 PHONE_RE = re.compile(r"(?<!\d)(?:\+?\d[\d\s().-]{7,}\d)(?!\d)")
+TAG_RE = re.compile(r"<[^>]+>")
 WS_RE = re.compile(r"\s+")
+
+def now_iso():
+    return datetime.now(timezone.utc).isoformat()
 
 def h(value: str) -> str:
     return hashlib.sha256(value.encode("utf-8", "ignore")).hexdigest()[:24]
 
-def fetch_json(url: str):
-    req = urllib.request.Request(
-        url,
-        headers={"User-Agent": UA, "Accept": "application/json"},
-    )
-    with urllib.request.urlopen(req, timeout=15) as r:
+def fetch_json(url: str, timeout=15):
+    req = urllib.request.Request(url, headers={"User-Agent": UA, "Accept": "application/json"})
+    with urllib.request.urlopen(req, timeout=timeout) as r:
         return json.loads(r.read().decode("utf-8"))
 
 def clean_text(text: str) -> str:
@@ -54,72 +70,236 @@ def clean_text(text: str) -> str:
     text = MENTION_RE.sub("[mention]", text)
     return WS_RE.sub(" ", text).strip()[:500]
 
-def allowed_links(text: str, post: dict):
-    candidates = list(URL_RE.findall(text or ""))
-    embed = post.get("embed") or {}
-    ext = embed.get("external") if isinstance(embed, dict) else None
-    if isinstance(ext, dict) and ext.get("uri"):
-        candidates.append(str(ext["uri"]))
-    out = []
-    for raw in candidates:
-        raw = raw.rstrip(".,;:!?)]}")
-        try:
-            u = urllib.parse.urlparse(raw)
-            host = (u.hostname or "").lower()
-            if host in ALLOWED_LINK_HOSTS:
-                out.append(raw[:500])
-        except Exception:
-            continue
-    return sorted(set(out))[:10]
+def html_to_text(value: str) -> str:
+    return WS_RE.sub(" ", html.unescape(TAG_RE.sub(" ", value or ""))).strip()
 
-def collect():
-    now = datetime.now(timezone.utc).isoformat()
-    rows = {}
-    health = []
-    for bucket, query in QUERY_BUCKETS:
-        params = urllib.parse.urlencode({"q": query, "sort": "latest", "limit": "100"})
-        url = f"{API}?{params}"
+def allowed_links_from_values(values):
+    out = set()
+    for raw in values:
+        if not isinstance(raw, str):
+            continue
+        for candidate in URL_RE.findall(raw):
+            candidate = html.unescape(candidate).rstrip(".,;:!?)]}")
+            try:
+                u = urllib.parse.urlparse(candidate)
+                host = (u.hostname or "").lower()
+                if host in ALLOWED_LINK_HOSTS:
+                    out.add(candidate[:500])
+            except Exception:
+                pass
+    return sorted(out)[:10]
+
+def recursive_urls(obj):
+    vals = []
+    if isinstance(obj, dict):
+        for k, v in obj.items():
+            if isinstance(v, str) and (k.lower() in {"uri", "url", "href"} or v.startswith("http")):
+                vals.append(v)
+            elif isinstance(v, (dict, list)):
+                vals.extend(recursive_urls(v))
+    elif isinstance(obj, list):
+        for v in obj:
+            vals.extend(recursive_urls(v))
+    return vals
+
+def buckets_for(text: str, links):
+    hay = (text + " " + " ".join(links)).lower()
+    return sorted([name for name, pats in BUCKET_PATTERNS.items() if any(p in hay for p in pats)])
+
+def parse_time(value):
+    if not value:
+        return None
+    try:
+        return datetime.fromisoformat(str(value).replace("Z", "+00:00"))
+    except Exception:
+        return None
+
+def load_previous(rows):
+    try:
+        old = fetch_json(PREVIOUS, timeout=10)
+    except Exception:
+        return 0
+    cutoff = datetime.now(timezone.utc) - timedelta(minutes=30)
+    kept = 0
+    for item in old.get("items") or []:
+        seen = parse_time(item.get("last_observed_at") or item.get("observed_at"))
+        if not seen or seen < cutoff:
+            continue
+        ph = item.get("post_hash")
+        if ph:
+            rows[ph] = item
+            kept += 1
+    return kept
+
+def upsert(rows, *, source, actor_id, post_id, created_at, text, links, buckets):
+    if not buckets and not links:
+        return False
+    ph = h(post_id)
+    ts = now_iso()
+    prev = rows.get(ph)
+    if prev:
+        prev["last_observed_at"] = ts
+        prev["buckets"] = sorted(set((prev.get("buckets") or []) + buckets))
+        prev["links"] = sorted(set((prev.get("links") or []) + links))[:10]
+        return False
+    rows[ph] = {
+        "post_hash": ph,
+        "actor_hash": h(actor_id) if actor_id else None,
+        "created_at": created_at,
+        "first_observed_at": ts,
+        "last_observed_at": ts,
+        "text": clean_text(text),
+        "links": links[:10],
+        "buckets": buckets,
+        "source": source,
+    }
+    return True
+
+def parse_jetstream_event(evt):
+    # v1 Jetstream wire
+    if evt.get("kind") == "commit":
+        commit = evt.get("commit") or {}
+        if commit.get("collection") != "app.bsky.feed.post":
+            return None
+        if commit.get("operation") not in (None, "create", "update"):
+            return None
+        record = commit.get("record") or {}
+        did = str(evt.get("did") or "")
+        rkey = str(commit.get("rkey") or "")
+        post_id = f"at://{did}/app.bsky.feed.post/{rkey}" if did and rkey else json.dumps(evt, sort_keys=True)[:1000]
+        return did, post_id, record
+    # v2 XRPC JSON wire compatibility
+    payload = evt.get("payload") if evt.get("$type") == "message" else evt
+    if isinstance(payload, dict) and str(payload.get("$type", "")).endswith("#commit"):
+        if payload.get("collection") != "app.bsky.feed.post":
+            return None
+        if payload.get("operation") not in (None, "create", "update"):
+            return None
+        record = payload.get("record") or {}
+        did = str(payload.get("did") or "")
+        rkey = str(payload.get("rkey") or "")
+        post_id = f"at://{did}/app.bsky.feed.post/{rkey}" if did and rkey else json.dumps(payload, sort_keys=True)[:1000]
+        return did, post_id, record
+    return None
+
+async def collect_jetstream(rows, seconds, health):
+    start = time.monotonic()
+    messages = 0
+    matched = 0
+    created = 0
+    error = None
+    try:
+        async with websockets.connect(
+            JETSTREAM,
+            max_size=2_000_000,
+            ping_interval=20,
+            ping_timeout=20,
+            open_timeout=15,
+            close_timeout=5,
+        ) as ws:
+            while time.monotonic() - start < seconds:
+                remain = max(1, seconds - (time.monotonic() - start))
+                try:
+                    raw = await asyncio.wait_for(ws.recv(), timeout=min(15, remain))
+                except asyncio.TimeoutError:
+                    continue
+                if isinstance(raw, bytes):
+                    continue
+                messages += 1
+                try:
+                    evt = json.loads(raw)
+                except Exception:
+                    continue
+                parsed = parse_jetstream_event(evt)
+                if not parsed:
+                    continue
+                did, post_id, record = parsed
+                text = str(record.get("text") or "")
+                links = allowed_links_from_values([text] + recursive_urls(record))
+                buckets = buckets_for(text, links)
+                if not buckets and not links:
+                    continue
+                matched += 1
+                if upsert(
+                    rows,
+                    source="bluesky_jetstream",
+                    actor_id=did,
+                    post_id=post_id,
+                    created_at=record.get("createdAt"),
+                    text=text,
+                    links=links,
+                    buckets=buckets,
+                ):
+                    created += 1
+    except Exception as e:
+        error = f"{type(e).__name__}:{str(e)[:160]}"
+    health.append({
+        "source": "bluesky_jetstream",
+        "ok": error is None,
+        "seconds": round(time.monotonic() - start, 1),
+        "messages": messages,
+        "matched": matched,
+        "new_items": created,
+        **({"error": error} if error else {}),
+    })
+
+def collect_mastodon(rows, health):
+    for url in MASTODON_TIMELINES:
+        host = urllib.parse.urlparse(url).hostname or "mastodon"
+        matched = 0
+        created = 0
         try:
-            data = fetch_json(url)
-            posts = data.get("posts") or []
-            health.append({"bucket": bucket, "query": query, "ok": True, "count": len(posts)})
+            statuses = fetch_json(url, timeout=12)
+            for st in statuses if isinstance(statuses, list) else []:
+                content_html = str(st.get("content") or "")
+                text = html_to_text(content_html)
+                links = allowed_links_from_values([content_html] + HREF_RE.findall(content_html))
+                buckets = buckets_for(text, links)
+                if not buckets and not links:
+                    continue
+                matched += 1
+                account = st.get("account") or {}
+                actor_id = str(account.get("uri") or account.get("url") or account.get("id") or "")
+                post_id = str(st.get("uri") or st.get("url") or st.get("id") or "")
+                if not post_id:
+                    continue
+                if upsert(
+                    rows,
+                    source=f"mastodon_public:{host}",
+                    actor_id=actor_id,
+                    post_id=post_id,
+                    created_at=st.get("created_at"),
+                    text=text,
+                    links=links,
+                    buckets=buckets,
+                ):
+                    created += 1
+            health.append({"source": f"mastodon_public:{host}", "ok": True, "matched": matched, "new_items": created})
         except Exception as e:
-            health.append({"bucket": bucket, "query": query, "ok": False, "error": type(e).__name__})
-            continue
+            health.append({"source": f"mastodon_public:{host}", "ok": False, "error": f"{type(e).__name__}:{str(e)[:120]}"})
 
-        for post in posts:
-            record = post.get("record") or {}
-            text = str(record.get("text") or "")
-            uri = str(post.get("uri") or "")
-            did = str((post.get("author") or {}).get("did") or "")
-            if not uri:
-                continue
-            ph = h(uri)
-            row = rows.get(ph)
-            if row is None:
-                row = {
-                    "post_hash": ph,
-                    "actor_hash": h(did) if did else None,
-                    "created_at": record.get("createdAt"),
-                    "indexed_at": post.get("indexedAt"),
-                    "text": clean_text(text),
-                    "links": allowed_links(text, post),
-                    "buckets": [],
-                    "source": "bluesky_public_search",
-                }
-                rows[ph] = row
-            if bucket not in row["buckets"]:
-                row["buckets"].append(bucket)
+async def collect(duration):
+    rows = {}
+    previous_kept = load_previous(rows)
+    health = []
+    collect_mastodon(rows, health)
+    await collect_jetstream(rows, duration, health)
 
-    items = list(rows.values())
-    items.sort(key=lambda x: str(x.get("created_at") or x.get("indexed_at") or ""), reverse=True)
-    items = items[:600]
+    cutoff = datetime.now(timezone.utc) - timedelta(minutes=30)
+    items = []
+    for item in rows.values():
+        seen = parse_time(item.get("last_observed_at") or item.get("first_observed_at"))
+        if seen and seen >= cutoff:
+            items.append(item)
+    items.sort(key=lambda x: str(x.get("last_observed_at") or ""), reverse=True)
+    items = items[:800]
     actors = len({x["actor_hash"] for x in items if x.get("actor_hash")})
     linked = sum(1 for x in items if x.get("links"))
 
     return {
-        "schema": "public_social_propagation_v1",
-        "generated_at": now,
+        "schema": "public_social_propagation_v2",
+        "generated_at": now_iso(),
+        "window_minutes": 30,
         "privacy": {
             "account_handles_stored": False,
             "account_ids_stored": False,
@@ -128,11 +308,13 @@ def collect():
             "emails_redacted": True,
             "phones_redacted": True,
             "private_system_data": False,
+            "private_strategy_thresholds": False,
         },
         "summary": {
             "items": len(items),
             "independent_actor_hashes": actors,
             "items_with_platform_links": linked,
+            "previous_items_carried": previous_kept,
         },
         "source_health": health,
         "items": items,
@@ -141,8 +323,9 @@ def collect():
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--output", required=True)
+    ap.add_argument("--duration", type=int, default=170)
     args = ap.parse_args()
-    payload = collect()
+    payload = asyncio.run(collect(max(30, min(args.duration, 210))))
     with open(args.output, "w", encoding="utf-8") as f:
         json.dump(payload, f, ensure_ascii=False, separators=(",", ":"))
     print(json.dumps(payload["summary"]))
