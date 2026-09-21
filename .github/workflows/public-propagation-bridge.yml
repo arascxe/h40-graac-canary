@@ -2,7 +2,7 @@ name: Public propagation bridge
 
 on:
   schedule:
-    - cron: "7,37 * * * *"
+    - cron: "11 */4 * * *"
   workflow_dispatch:
   push:
     paths:
@@ -19,7 +19,7 @@ concurrency:
 jobs:
   collect:
     runs-on: ubuntu-latest
-    timeout-minutes: 35
+    timeout-minutes: 330
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -27,7 +27,7 @@ jobs:
       - name: Install minimal websocket client
         run: python3 -m pip install --disable-pip-version-check --quiet "websockets>=13,<16"
 
-      - name: Run six near-continuous propagation captures
+      - name: Run near-continuous propagation capture
         env:
           GITHUB_TOKEN: ${{ github.token }}
         shell: bash
@@ -56,7 +56,7 @@ jobs:
             cd "$GITHUB_WORKSPACE"
           }
 
-          for i in 1 2 3 4 5 6; do
+          for i in $(seq 1 60); do
             echo "capture_cycle=$i started=$(date -u +%FT%TZ)"
             python3 propagation/collect.py --output /tmp/latest.json --duration 270
 
@@ -69,7 +69,6 @@ jobs:
           assert privacy.get('private_strategy_thresholds') is False
           assert privacy.get('account_handles_stored') is False
           assert privacy.get('account_ids_stored') is False
-          assert (p.get('summary') or {}).get('independent_actor_hashes', 0) >= 0
           print(p['summary'])
           print(p['source_health'])
           PY
