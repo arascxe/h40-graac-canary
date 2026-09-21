@@ -325,7 +325,7 @@ def main():
     ap.add_argument("--output", required=True)
     ap.add_argument("--duration", type=int, default=170)
     args = ap.parse_args()
-    payload = asyncio.run(collect(max(30, min(args.duration, 210))))
+    payload = asyncio.run(collect(max(30, min(args.duration, 275))))
     with open(args.output, "w", encoding="utf-8") as f:
         json.dump(payload, f, ensure_ascii=False, separators=(",", ":"))
     print(json.dumps(payload["summary"]))
