@@ -1,0 +1,55 @@
+name: Public propagation bridge
+
+on:
+  schedule:
+    - cron: "*/5 * * * *"
+  workflow_dispatch:
+  push:
+    paths:
+      - "propagation/**"
+      - ".github/workflows/public-propagation-bridge.yml"
+
+permissions:
+  contents: write
+
+concurrency:
+  group: public-propagation-bridge
+  cancel-in-progress: true
+
+jobs:
+  collect:
+    runs-on: ubuntu-latest
+    timeout-minutes: 4
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Collect public propagation snapshot
+        run: |
+          python3 propagation/collect.py --output /tmp/latest.json
+          python3 - <<'PY'
+          import json
+          p=json.load(open('/tmp/latest.json'))
+          assert p.get('schema') == 'public_social_propagation_v1'
+          assert p.get('privacy',{}).get('private_system_data') is False
+          assert p.get('privacy',{}).get('account_handles_stored') is False
+          print(p['summary'])
+          PY
+
+      - name: Publish one-commit data branch
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git checkout --orphan propagation-data-tmp
+          git rm -rf . >/dev/null 2>&1 || true
+          cp /tmp/latest.json latest.json
+          cat > README.md <<'EOF'
+          Public, privacy-minimized propagation snapshot generated from public sources.
+          No private system credentials, private repository data, wallet data, Telegram data,
+          Supabase credentials, user account handles, or economic scoring thresholds are stored here.
+          EOF
+          git add latest.json README.md
+          git commit -m "Update public propagation snapshot"
+          git push --force origin HEAD:propagation-data
