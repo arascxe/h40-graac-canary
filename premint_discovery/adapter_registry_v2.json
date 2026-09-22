@@ -1,0 +1,55 @@
+{
+  "version": "DISCOVERY_ADAPTER_REGISTRY_V2",
+  "policy": {
+    "zero_cost_only": true,
+    "auto_launch": false,
+    "raw_trend_score_is_not_demand_proof": true,
+    "all_adapters_must_pass_runtime_smoke": true,
+    "failed_adapter_must_not_block_bus": true
+  },
+  "adapters": [
+    {
+      "id": "reddit_rss",
+      "status": "LIVE",
+      "cadence": "rotating_public_rising_feeds",
+      "transport": "public_atom_rss",
+      "notes": "r/all plus rotating meme-heavy feed; rate-limit aware"
+    },
+    {
+      "id": "youtube_fresh_search",
+      "status": "LIVE",
+      "cadence": "each_capture_cycle",
+      "transport": "public_youtubei_search",
+      "notes": "fresh-video discovery with public thumbnail pHash at observation time"
+    },
+    {
+      "id": "tiktok_creative_center",
+      "status": "BLOCKED_DIRECT_HTTP_BROWSER_PROBE",
+      "transport": "creative_center_public_page",
+      "known_direct_http_result": "40101",
+      "notes": "raw popular_trend calls are not accepted; real-browser interception/DOM fallback under test"
+    },
+    {
+      "id": "bluesky_jetstream",
+      "status": "SUPPORT_ONLY_CAPPED",
+      "cadence": "continuous",
+      "transport": "public_jetstream_websocket",
+      "notes": "hard-capped in output so it cannot dominate V2 inference"
+    },
+    {
+      "id": "mastodon_public",
+      "status": "SUPPORT_ONLY",
+      "cadence": "throttled",
+      "transport": "public_timeline_api"
+    }
+  ],
+  "edge_layer": {
+    "universal_envelope": "DISCOVERY_ENVELOPE_V2",
+    "replication_evidence": [
+      "EXACT_URL",
+      "IMAGE_PHASH_HAMMING_LE_8",
+      "TEXT_SIMHASH_HAMMING_LE_6_WITH_SHARED_SEMANTIC_TOKENS"
+    ],
+    "decision_target": "P(HIGH_GENUINE_CREATOR_FEE_TURNOVER | PRE_MINT_OBJECT_STATE, SEMANTIC_VACANCY)"
+  }
+}
