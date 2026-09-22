@@ -1,0 +1,23 @@
+name: Entity resolution V2 calibration
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - "premint_discovery/calibrate_entity_resolution_v2.py"
+      - "premint_discovery/envelope_v2.py"
+      - ".github/workflows/entity-resolution-calibration-v2.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  calibrate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install dependencies
+        run: python3 -m pip install --disable-pip-version-check --quiet "pillow>=10,<12"
+      - name: Run calibration
+        run: python3 premint_discovery/calibrate_entity_resolution_v2.py
