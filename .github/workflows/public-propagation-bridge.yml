@@ -56,9 +56,11 @@ jobs:
             cd "$GITHUB_WORKSPACE"
           }
 
-          for i in $(seq 1 60); do
+          # 180 x 90s = 4.5h of near-continuous coverage.
+          # Short windows cut first-object latency without changing the public-only/privacy model.
+          for i in $(seq 1 180); do
             echo "capture_cycle=$i started=$(date -u +%FT%TZ)"
-            python3 propagation/collect.py --output /tmp/latest.json --duration 270
+            python3 propagation/collect.py --output /tmp/latest.json --duration 90
 
             python3 - <<'PY'
           import json
