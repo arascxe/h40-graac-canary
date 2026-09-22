@@ -25,6 +25,8 @@ from datetime import datetime, timedelta, timezone
 
 import websockets
 
+from envelope_v2 import build_envelope, pick_media_url
+
 UA = "fee100k-premint-discovery/2.1 (+github-actions)"
 BROWSER_UA = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/153.0.0.0 Safari/537.36"
 JETSTREAM = "wss://jetstream1.us-east.bsky.network/subscribe?wantedCollections=app.bsky.feed.post"
@@ -166,28 +168,32 @@ def buckets_for(text: str, links):
     hay = (text + " " + " ".join(links)).lower()
     return sorted([name for name, pats in BUCKET_PATTERNS.items() if any(p in hay for p in pats)])
 
-def upsert(rows, *, source, actor_id, post_id, created_at, text, links, buckets):
+def upsert(rows, *, source, actor_id, post_id, created_at, text, links, buckets,
+           media_url=None, parent_url=None):
     if not buckets and not links:
         return False
     ph = h(f"{source}:{post_id}")
     ts = now_iso()
+    actor_hash = h(actor_id) if actor_id else None
     prev = rows.get(ph)
     if prev:
         prev["last_observed_at"] = ts
         prev["buckets"] = sorted(set((prev.get("buckets") or []) + buckets))
         prev["links"] = sorted(set((prev.get("links") or []) + links))[:12]
         return False
-    rows[ph] = {
-        "post_hash": ph,
-        "actor_hash": h(actor_id) if actor_id else None,
-        "created_at": created_at,
-        "first_observed_at": ts,
-        "last_observed_at": ts,
-        "text": clean_text(text),
-        "links": links[:12],
-        "buckets": sorted(set(buckets)),
-        "source": source,
-    }
+    rows[ph] = build_envelope(
+        source=source,
+        post_hash=ph,
+        actor_hash=actor_hash,
+        published_at=created_at,
+        first_observed_at=ts,
+        last_observed_at=ts,
+        text=clean_text(text),
+        links=links[:12],
+        buckets=sorted(set(buckets)),
+        media_url=media_url,
+        parent_url=parent_url,
+    )
     return True
 
 def parse_jetstream_event(evt):
@@ -260,6 +266,7 @@ async def collect_jetstream(rows, seconds, health):
                     text=text,
                     links=links,
                     buckets=buckets,
+                    media_url=pick_media_url(recursive_urls(record)),
                 ):
                     created += 1
     except Exception as e:
@@ -293,6 +300,9 @@ def collect_mastodon(rows, health):
                 post_id = str(st.get("uri") or st.get("url") or st.get("id") or "")
                 if not post_id:
                     continue
+                media_values = []
+                for att in (st.get("media_attachments") or []):
+                    media_values += [att.get("preview_url"), att.get("url")]
                 if upsert(
                     rows,
                     source=f"mastodon_public:{host}",
@@ -302,6 +312,7 @@ def collect_mastodon(rows, health):
                     text=text,
                     links=links,
                     buckets=buckets,
+                    media_url=pick_media_url(media_values),
                 ):
                     created += 1
             health.append({"source": f"mastodon_public:{host}", "ok": True, "matched": matched, "new_items": created})
@@ -347,6 +358,7 @@ def collect_reddit_rss(rows, health, cycle=1):
                     text=text,
                     links=links,
                     buckets=buckets,
+                    media_url=pick_media_url([content]),
                 ):
                     created += 1
         except Exception as e:
@@ -448,6 +460,7 @@ def collect_tiktok_creative_center(rows, health):
                 text=title,
                 links=links,
                 buckets=buckets + ["direct_video_seed"],
+                media_url=str(item.get("thumbnail_url") or item.get("cover") or item.get("cover_url") or "") or None,
             ):
                 video_created += 1
     except Exception as e:
@@ -545,6 +558,7 @@ def collect_youtube_discovery(rows, health, seed_tags):
                     text=text,
                     links=[url],
                     buckets=buckets + ["discovery_seed"],
+                    media_url=f"https://i.ytimg.com/vi/{video_id}/hqdefault.jpg",
                 ):
                     created += 1
         except Exception as e:
@@ -641,7 +655,7 @@ async def collect(duration, cycle):
         source_mix[item["source"]] = source_mix.get(item["source"], 0) + 1
 
     return {
-        "schema": "premint_object_discovery_v2",
+        "schema": "discovery_adapter_bus_v2",
         "generated_at": now_iso(),
         "window_minutes": round(duration / 60.0, 2),
         "capture_seconds": duration,
