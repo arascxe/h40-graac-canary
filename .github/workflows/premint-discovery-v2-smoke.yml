@@ -22,7 +22,7 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Install websocket client
-        run: python3 -m pip install --disable-pip-version-check --quiet "websockets>=13,<16"
+        run: python3 -m pip install --disable-pip-version-check --quiet "websockets>=13,<16" "pillow>=10,<12"
 
       - name: Compile
         run: python3 -m py_compile premint_discovery/collect_v2.py
@@ -42,10 +42,12 @@ jobs:
           python3 - <<'PY'
           import json
           p=json.load(open('/tmp/premint-v2.json'))
-          assert p.get('schema') == 'premint_object_discovery_v2'
+          assert p.get('schema') == 'discovery_adapter_bus_v2'
           assert p.get('policy',{}).get('auto_launch') is False
           assert p.get('privacy',{}).get('account_handles_stored') is False
           assert len(p.get('items',[])) <= 800
+          assert all(i.get('envelope_version') == 'DISCOVERY_ENVELOPE_V2' for i in p.get('items',[]))
+          assert all('text_fingerprint' in i for i in p.get('items',[]))
           print(json.dumps(p.get('summary',{}), indent=2))
           print(json.dumps(p.get('source_health',[]), indent=2))
           PY
