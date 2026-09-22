@@ -27,6 +27,13 @@ jobs:
       - name: Compile
         run: python3 -m py_compile premint_discovery/collect_v2.py
 
+      - name: Install TikTok probe dependency
+        run: npm install --no-save --no-audit --no-fund jsdom@26
+
+      - name: Probe TikTok Creative Center signing
+        continue-on-error: true
+        run: node premint_discovery/tiktok_cc_probe.mjs
+
       - name: Run discovery smoke
         run: python3 premint_discovery/collect_v2.py --output /tmp/premint-v2.json --duration 30 --cycle 1
 
