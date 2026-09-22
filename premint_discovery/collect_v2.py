@@ -25,7 +25,7 @@ from datetime import datetime, timedelta, timezone
 
 import websockets
 
-UA = "fee100k-premint-discovery/2.0 (+github-actions)"
+UA = "fee100k-premint-discovery/2.1 (+github-actions)"\nBROWSER_UA = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/153.0.0.0 Safari/537.36"
 JETSTREAM = "wss://jetstream1.us-east.bsky.network/subscribe?wantedCollections=app.bsky.feed.post"
 
 MASTODON_TIMELINES = [
@@ -312,11 +312,11 @@ def collect_reddit_rss(rows, health):
     errors = []
     ns = {"atom": "http://www.w3.org/2005/Atom"}
     for subreddit, feed in REDDIT_FEEDS:
-        url = f"https://old.reddit.com/r/{subreddit}/{feed}.rss?limit=20"
+        url = f"https://www.reddit.com/r/{subreddit}/{feed}/.rss?limit=20"
         try:
             raw = request_bytes(
                 url,
-                headers={"Accept": "application/atom+xml,application/xml,text/xml;q=0.9"},
+                headers={"User-Agent": BROWSER_UA, "Accept": "application/atom+xml,application/xml,text/xml;q=0.9"},
                 timeout=12,
             )
             root = ET.fromstring(raw)
