@@ -6,8 +6,12 @@ const out = {
   title: null,
   intercepted_api_calls: 0,
   captured_signed_headers: false,
+  network_events: [],
   hashtag_items: [],
   video_items: [],
+  dom_hashtags: [],
+  dom_links: [],
+  body_text_sample: null,
   errors: [],
 };
 
@@ -25,20 +29,37 @@ try {
   const page = await context.newPage();
 
   page.on("request", (req) => {
-    if (!req.url().includes("creative_radar_api")) return;
+    const u = req.url();
+    if (!(u.includes("creative_radar_api") || u.includes("cc_portal_api") || u.toLowerCase().includes("trend"))) return;
     out.intercepted_api_calls += 1;
     const h = req.headers();
     if ((h["user-sign"] || h["User-Sign"]) && (h["timestamp"] || h["Timestamp"]) &&
         (h["anonymous-user-id"] || h["web-id"] || h["Web-Id"])) {
       out.captured_signed_headers = true;
     }
+    if (out.network_events.length < 20) {
+      try {
+        const x = new URL(u);
+        out.network_events.push({kind:"request",host:x.host,path:x.pathname,has_query:Boolean(x.search)});
+      } catch {}
+    }
   });
 
   page.on("response", async (resp) => {
     const url = resp.url();
-    if (!url.includes("creative_radar_api")) return;
+    if (!(url.includes("creative_radar_api") || url.includes("cc_portal_api") || url.toLowerCase().includes("trend"))) return;
     try {
       const data = await resp.json();
+      if (out.network_events.length < 30) {
+        try {
+          const x = new URL(url);
+          out.network_events.push({
+            kind:"response",host:x.host,path:x.pathname,status:resp.status(),
+            code:data?.code ?? null,top_keys:Object.keys(data || {}).slice(0,12),
+            data_keys:Object.keys(data?.data || {}).slice(0,12)
+          });
+        } catch {}
+      }
       const d = data?.data || {};
       const list = d?.list || d?.hashtags || d?.videos || [];
       if (!Array.isArray(list)) return;
@@ -77,6 +98,25 @@ try {
   // Small scroll to trigger lazy network activity without interacting with accounts.
   await page.evaluate(() => window.scrollTo(0, Math.max(document.body.scrollHeight / 2, 600)));
   await page.waitForTimeout(8000);
+
+  // DOM fallback: Creative Center may render trends through portal APIs that do
+  // not expose the older popular_trend JSON shape.
+  try {
+    const dom = await page.evaluate(() => {
+      const links = Array.from(document.querySelectorAll("a[href]"))
+        .map(a => ({href:a.href,text:(a.textContent || "").trim()}))
+        .filter(x => /hashtag|trend|popular/i.test(x.href + " " + x.text))
+        .slice(0,80);
+      const body = (document.body?.innerText || "").replace(/\s+/g," ").trim();
+      const tags = Array.from(new Set((body.match(/#[A-Za-z0-9_]{2,64}/g) || []))).slice(0,80);
+      return {links,tags,body:body.slice(0,1200)};
+    });
+    out.dom_links = dom.links;
+    out.dom_hashtags = dom.tags;
+    out.body_text_sample = dom.body;
+  } catch (e) {
+    out.errors.push("dom:" + String(e?.message || e).slice(0,120));
+  }
 
   // Deduplicate output.
   const seenTags = new Set();
