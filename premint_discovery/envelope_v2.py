@@ -26,6 +26,7 @@ STOP = {
     "official","original","youtube","tiktok","instagram","twitter","reddit","bluesky","http","https","www",
     "ago","day","days","hour","hours","minute","minutes","week","weeks","month","months","year","years",
     "views","view","posts","post","rank","popular","trending","trend",
+    "submitted","comments","comment","shorts","short","com","youtu","www","link",
 }
 DERIVATIVE_ORDER = ["remix","template","parody","derivative","reaction","meme","viral"]
 
@@ -144,36 +145,54 @@ def _download(url, timeout=5, limit=3_000_000):
             return None
         return data
 
-def image_phash64(url):
+def _phash_image(img):
+    img = img.convert("L").resize((32,32), Image.Resampling.LANCZOS)
+    px = list(img.getdata())
+    coeffs = []
+    for u in range(8):
+        for v in range(8):
+            s = 0.0
+            for x in range(32):
+                cx = math.cos((2*x+1)*u*math.pi/64.0)
+                row = x*32
+                for y in range(32):
+                    s += px[row+y] * cx * math.cos((2*y+1)*v*math.pi/64.0)
+            coeffs.append(s)
+    med = statistics.median(coeffs[1:])
+    return "".join("1" if c > med else "0" for c in coeffs)
+
+def image_phash_views(url):
     if not url or Image is None:
-        return None
+        return {"full":None,"center":None,"square":None}
     if url in _PHASH_CACHE:
         return _PHASH_CACHE[url]
+    out = {"full":None,"center":None,"square":None}
     try:
         data = _download(url)
         if not data:
-            _PHASH_CACHE[url] = None
-            return None
-        img = Image.open(io.BytesIO(data)).convert("L").resize((32,32), Image.Resampling.LANCZOS)
-        px = list(img.getdata())
-        # Low-frequency 8x8 2-D DCT. 64*1024 ~= 65k ops/image; bounded and deterministic.
-        coeffs = []
-        for u in range(8):
-            for v in range(8):
-                s = 0.0
-                for x in range(32):
-                    cx = math.cos((2*x+1)*u*math.pi/64.0)
-                    row = x*32
-                    for y in range(32):
-                        s += px[row+y] * cx * math.cos((2*y+1)*v*math.pi/64.0)
-                coeffs.append(s)
-        med = statistics.median(coeffs[1:])
-        bits = "".join("1" if c > med else "0" for c in coeffs)
-        _PHASH_CACHE[url] = bits
-        return bits
+            _PHASH_CACHE[url] = out
+            return out
+        src = Image.open(io.BytesIO(data)).convert("RGB")
+        w,h = src.size
+        out["full"] = _phash_image(src)
+
+        # 80% center crop tolerates repost UI borders/captions.
+        dx,dy = int(w*0.10),int(h*0.10)
+        if w-2*dx >= 16 and h-2*dy >= 16:
+            out["center"] = _phash_image(src.crop((dx,dy,w-dx,h-dy)))
+
+        # Center square tolerates portrait/landscape re-framing across surfaces.
+        side = min(w,h)
+        left=(w-side)//2; top=(h-side)//2
+        if side >= 16:
+            out["square"] = _phash_image(src.crop((left,top,left+side,top+side)))
     except Exception:
-        _PHASH_CACHE[url] = None
-        return None
+        pass
+    _PHASH_CACHE[url] = out
+    return out
+
+def image_phash64(url):
+    return image_phash_views(url).get("full")
 
 def derivative_types(buckets):
     b = set(buckets or [])
@@ -187,7 +206,8 @@ def build_envelope(*, source, post_hash, actor_hash, published_at, first_observe
     tfp = simhash64(toks)
     normalized_links = [x for x in (normalize_object_url(u) for u in (links or [])) if x]
     canonical = normalized_links[0] if normalized_links else None
-    ph = image_phash64(media_url) if media_url else None
+    phv = image_phash_views(media_url) if media_url else {"full":None,"center":None,"square":None}
+    ph = phv.get("full")
     derivatives = derivative_types(buckets)
     adapter = source.split(":",1)[0]
     image_bands = bands64(ph)
@@ -222,6 +242,8 @@ def build_envelope(*, source, post_hash, actor_hash, published_at, first_observe
         "semantic_tokens": toks,
         "media_url": media_url,
         "image_phash": ph,
+        "image_phash_center": phv.get("center"),
+        "image_phash_square": phv.get("square"),
         "image_bands": image_bands,
         "derivative_type": derivatives[0] if derivatives else None,
         "derivative_types": derivatives,
