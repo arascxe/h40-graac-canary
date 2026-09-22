@@ -170,7 +170,7 @@ def buckets_for(text: str, links):
     return sorted([name for name, pats in BUCKET_PATTERNS.items() if any(p in hay for p in pats)])
 
 def upsert(rows, *, source, actor_id, post_id, created_at, text, links, buckets,
-           media_url=None, parent_url=None):
+           media_url=None, parent_url=None, engagement_snapshot=None, source_metadata=None):
     if not buckets and not links:
         return False
     ph = h(f"{source}:{post_id}")
@@ -194,6 +194,8 @@ def upsert(rows, *, source, actor_id, post_id, created_at, text, links, buckets,
         buckets=sorted(set(buckets)),
         media_url=media_url,
         parent_url=parent_url,
+        engagement_snapshot=engagement_snapshot,
+        source_metadata=source_metadata,
     )
     return True
 
@@ -421,6 +423,12 @@ def collect_tiktok_creative_center(rows, health):
                 text=text,
                 links=[url],
                 buckets=["trend_seed"],
+                engagement_snapshot={
+                    "posts": item.get("posts"),
+                    "views": item.get("views"),
+                    "rank": item.get("rank"),
+                },
+                source_metadata={"category": item.get("category")},
             ):
                 tag_created += 1
     except Exception as e:
@@ -522,7 +530,7 @@ def collect_tiktok_browser_bridge(rows, health):
                 continue
             matched += 1
             url = str(item.get("url") or f"https://www.tiktok.com/tag/{urllib.parse.quote(tag)}")
-            text = f"#{tag} posts={item.get('posts')} views={item.get('views')} category={item.get('category') or ''}"
+            text = f"#{tag} {item.get('category') or ''}".strip()
             if upsert(
                 rows,
                 source="tiktok_cc_browser:hashtag",
@@ -611,7 +619,7 @@ def collect_youtube_discovery(rows, health, seed_tags):
                 if age_s is not None:
                     created_at = (datetime.now(timezone.utc) - timedelta(seconds=age_s)).isoformat()
                 url = f"https://www.youtube.com/watch?v={video_id}"
-                text = f"{title} {published}"
+                text = title
                 buckets = buckets_for(text, [url])
                 matched += 1
                 if upsert(
@@ -624,6 +632,7 @@ def collect_youtube_discovery(rows, health, seed_tags):
                     links=[url],
                     buckets=buckets + ["discovery_seed"],
                     media_url=f"https://i.ytimg.com/vi/{video_id}/hqdefault.jpg",
+                    source_metadata={"published_relative": published},
                 ):
                     created += 1
         except Exception as e:
