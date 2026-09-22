@@ -8,16 +8,14 @@ import re
 import time
 import urllib.parse
 import urllib.request
-from datetime import datetime, timezone, timedelta
+from datetime import datetime, timezone
 
 import websockets
 
-UA = "public-propagation-bridge/2.0 (+github-actions)"
+UA = "public-propagation-bridge/2.1 (+github-actions)"
 JETSTREAM = "wss://jetstream1.us-east.bsky.network/subscribe?wantedCollections=app.bsky.feed.post"
-PREVIOUS = "https://raw.githubusercontent.com/arascxe/h40-graac-canary/propagation-data/latest.json"
 
 MASTODON_TIMELINES = [
-    "https://mastodon.social/api/v1/timelines/public?limit=40",
     "https://mastodon.world/api/v1/timelines/public?limit=40",
     "https://mstdn.social/api/v1/timelines/public?limit=40",
     "https://mas.to/api/v1/timelines/public?limit=40",
@@ -106,31 +104,6 @@ def buckets_for(text: str, links):
     hay = (text + " " + " ".join(links)).lower()
     return sorted([name for name, pats in BUCKET_PATTERNS.items() if any(p in hay for p in pats)])
 
-def parse_time(value):
-    if not value:
-        return None
-    try:
-        return datetime.fromisoformat(str(value).replace("Z", "+00:00"))
-    except Exception:
-        return None
-
-def load_previous(rows):
-    try:
-        old = fetch_json(PREVIOUS, timeout=10)
-    except Exception:
-        return 0
-    cutoff = datetime.now(timezone.utc) - timedelta(minutes=30)
-    kept = 0
-    for item in old.get("items") or []:
-        seen = parse_time(item.get("last_observed_at") or item.get("observed_at"))
-        if not seen or seen < cutoff:
-            continue
-        ph = item.get("post_hash")
-        if ph:
-            rows[ph] = item
-            kept += 1
-    return kept
-
 def upsert(rows, *, source, actor_id, post_id, created_at, text, links, buckets):
     if not buckets and not links:
         return False
@@ -156,7 +129,6 @@ def upsert(rows, *, source, actor_id, post_id, created_at, text, links, buckets)
     return True
 
 def parse_jetstream_event(evt):
-    # v1 Jetstream wire
     if evt.get("kind") == "commit":
         commit = evt.get("commit") or {}
         if commit.get("collection") != "app.bsky.feed.post":
@@ -168,7 +140,6 @@ def parse_jetstream_event(evt):
         rkey = str(commit.get("rkey") or "")
         post_id = f"at://{did}/app.bsky.feed.post/{rkey}" if did and rkey else json.dumps(evt, sort_keys=True)[:1000]
         return did, post_id, record
-    # v2 XRPC JSON wire compatibility
     payload = evt.get("payload") if evt.get("$type") == "message" else evt
     if isinstance(payload, dict) and str(payload.get("$type", "")).endswith("#commit"):
         if payload.get("collection") != "app.bsky.feed.post":
@@ -184,9 +155,7 @@ def parse_jetstream_event(evt):
 
 async def collect_jetstream(rows, seconds, health):
     start = time.monotonic()
-    messages = 0
-    matched = 0
-    created = 0
+    messages = matched = created = 0
     error = None
     try:
         async with websockets.connect(
@@ -246,10 +215,9 @@ async def collect_jetstream(rows, seconds, health):
 def collect_mastodon(rows, health):
     for url in MASTODON_TIMELINES:
         host = urllib.parse.urlparse(url).hostname or "mastodon"
-        matched = 0
-        created = 0
+        matched = created = 0
         try:
-            statuses = fetch_json(url, timeout=12)
+            statuses = fetch_json(url, timeout=10)
             for st in statuses if isinstance(statuses, list) else []:
                 content_html = str(st.get("content") or "")
                 text = html_to_text(content_html)
@@ -279,18 +247,13 @@ def collect_mastodon(rows, health):
             health.append({"source": f"mastodon_public:{host}", "ok": False, "error": f"{type(e).__name__}:{str(e)[:120]}"})
 
 async def collect(duration):
+    # DELTA MODE: DB is the durable history. Never carry the previous 30-minute snapshot.
     rows = {}
-    previous_kept = load_previous(rows)
     health = []
     collect_mastodon(rows, health)
     await collect_jetstream(rows, duration, health)
 
-    cutoff = datetime.now(timezone.utc) - timedelta(minutes=30)
-    items = []
-    for item in rows.values():
-        seen = parse_time(item.get("last_observed_at") or item.get("first_observed_at"))
-        if seen and seen >= cutoff:
-            items.append(item)
+    items = list(rows.values())
     items.sort(key=lambda x: str(x.get("last_observed_at") or ""), reverse=True)
     items = items[:800]
     actors = len({x["actor_hash"] for x in items if x.get("actor_hash")})
@@ -299,7 +262,9 @@ async def collect(duration):
     return {
         "schema": "public_social_propagation_v2",
         "generated_at": now_iso(),
-        "window_minutes": 30,
+        "window_minutes": round(duration / 60.0, 2),
+        "capture_seconds": duration,
+        "delivery_mode": "DELTA_ONLY_V2_1",
         "privacy": {
             "account_handles_stored": False,
             "account_ids_stored": False,
@@ -314,7 +279,7 @@ async def collect(duration):
             "items": len(items),
             "independent_actor_hashes": actors,
             "items_with_platform_links": linked,
-            "previous_items_carried": previous_kept,
+            "previous_items_carried": 0,
         },
         "source_health": health,
         "items": items,
@@ -323,9 +288,9 @@ async def collect(duration):
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--output", required=True)
-    ap.add_argument("--duration", type=int, default=170)
+    ap.add_argument("--duration", type=int, default=90)
     args = ap.parse_args()
-    payload = asyncio.run(collect(max(30, min(args.duration, 275))))
+    payload = asyncio.run(collect(max(30, min(args.duration, 120))))
     with open(args.output, "w", encoding="utf-8") as f:
         json.dump(payload, f, ensure_ascii=False, separators=(",", ":"))
     print(json.dumps(payload["summary"]))
