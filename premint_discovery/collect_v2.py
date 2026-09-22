@@ -574,9 +574,14 @@ def collect_youtube_discovery(rows, health, seed_tags):
     })
 
 def collect_direct_sources(rows, health, cycle):
-    collect_mastodon(rows, health)
-    collect_reddit_rss(rows, health, cycle)
-    seed_tags = collect_tiktok_creative_center(rows, health)
+    # YouTube is the low-latency direct sensor. Reddit/TikTok refresh less often
+    # to respect public endpoint limits; Mastodon is supportive, not primary.
+    seed_tags = []
+    if cycle <= 1 or cycle % 2 == 1:
+        collect_mastodon(rows, health)
+    if cycle <= 1 or cycle % 4 == 1:
+        collect_reddit_rss(rows, health, cycle)
+        seed_tags = collect_tiktok_creative_center(rows, health)
     collect_youtube_discovery(rows, health, seed_tags)
 
 def select_stratified(rows, limit=800):
@@ -637,13 +642,10 @@ async def collect(duration, cycle):
     rows = {}
     health = []
 
-    # Direct public discovery sources refresh every 4th 90s cycle (~6 min).
-    run_direct = cycle <= 1 or cycle % 4 == 1
-    if run_direct:
-        direct_task = asyncio.to_thread(collect_direct_sources, rows, health, cycle)
-        await asyncio.gather(collect_jetstream(rows, duration, health), direct_task)
-    else:
-        await collect_jetstream(rows, duration, health)
+    # Adapter bus runs every cycle. Individual adapters self-throttle.
+    run_direct = True
+    direct_task = asyncio.to_thread(collect_direct_sources, rows, health, cycle)
+    await asyncio.gather(collect_jetstream(rows, duration, health), direct_task)
 
     items = select_stratified(rows, limit=800)
     actors = len({x["actor_hash"] for x in items if x.get("actor_hash")})
