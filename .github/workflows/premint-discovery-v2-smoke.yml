@@ -1,0 +1,44 @@
+name: Pre-mint discovery V2 smoke
+
+on:
+  push:
+    paths:
+      - "premint_discovery/**"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: premint-discovery-v2-smoke
+  cancel-in-progress: true
+
+jobs:
+  smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install websocket client
+        run: python3 -m pip install --disable-pip-version-check --quiet "websockets>=13,<16"
+
+      - name: Compile
+        run: python3 -m py_compile premint_discovery/collect_v2.py
+
+      - name: Run discovery smoke
+        run: python3 premint_discovery/collect_v2.py --output /tmp/premint-v2.json --duration 30 --cycle 1
+
+      - name: Validate output
+        run: |
+          python3 - <<'PY'
+          import json
+          p=json.load(open('/tmp/premint-v2.json'))
+          assert p.get('schema') == 'premint_object_discovery_v2'
+          assert p.get('policy',{}).get('auto_launch') is False
+          assert p.get('privacy',{}).get('account_handles_stored') is False
+          assert len(p.get('items',[])) <= 800
+          print(json.dumps(p.get('summary',{}), indent=2))
+          print(json.dumps(p.get('source_health',[]), indent=2))
+          PY
