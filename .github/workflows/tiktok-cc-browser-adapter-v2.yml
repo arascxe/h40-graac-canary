@@ -1,0 +1,75 @@
+name: TikTok CC browser adapter V2
+
+on:
+  schedule:
+    - cron: "37 */4 * * *"
+  workflow_dispatch:
+  push:
+    paths:
+      - "premint_discovery/tiktok_cc_browser_collect.mjs"
+      - ".github/workflows/tiktok-cc-browser-adapter-v2.yml"
+
+permissions:
+  contents: write
+
+concurrency:
+  group: tiktok-cc-browser-adapter-v2
+  cancel-in-progress: true
+
+jobs:
+  collect:
+    runs-on: ubuntu-latest
+    timeout-minutes: 330
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install Playwright
+        run: |
+          npm init -y >/dev/null 2>&1
+          npm install --no-save --no-audit --no-fund playwright@1.58.2
+          npx playwright install --with-deps chromium
+
+      - name: Run persistent TikTok Creative Center adapter
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          publish_seed () {
+            rm -rf /tmp/tiktok-publish
+            mkdir -p /tmp/tiktok-publish
+            cp /tmp/tiktok-latest.json /tmp/tiktok-publish/latest.json
+            cat > /tmp/tiktok-publish/README.md <<'EOF'
+          Public TikTok Creative Center discovery seeds.
+          No account credentials, login cookies, private data, wallet data,
+          or strategy thresholds are stored on this branch.
+          Hashtags are discovery seeds only and are never treated as demand proof.
+          EOF
+            cd /tmp/tiktok-publish
+            git init -q
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git checkout -q -b tiktok-data
+            git add latest.json README.md
+            git commit -q -m "Update TikTok Creative Center seed snapshot"
+            git remote add origin "https://x-access-token:${GITHUB_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
+            git push --force -q origin HEAD:tiktok-discovery-data-v2
+            cd "$GITHUB_WORKSPACE"
+          }
+
+          # 24 x 10m = 4h coverage; browser installed once per job.
+          for i in $(seq 1 24); do
+            echo "tiktok_cycle=$i started=$(date -u +%FT%TZ)"
+            node premint_discovery/tiktok_cc_browser_collect.mjs /tmp/tiktok-latest.json
+            node - <<'NODE'
+          const p=require("/tmp/tiktok-latest.json");
+          if (p.schema !== "tiktok_cc_browser_seed_v2") process.exit(2);
+          if (!p.health || !p.health.page_ok) process.exit(3);
+          console.log({hashtags:p.hashtags.length,videos:p.videos.length,health:p.health});
+          NODE
+            publish_seed
+            echo "tiktok_cycle=$i published=$(date -u +%FT%TZ)"
+            if [ "$i" -lt 24 ]; then sleep 570; fi
+          done
