@@ -25,7 +25,8 @@ from datetime import datetime, timedelta, timezone
 
 import websockets
 
-UA = "fee100k-premint-discovery/2.1 (+github-actions)"\nBROWSER_UA = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/153.0.0.0 Safari/537.36"
+UA = "fee100k-premint-discovery/2.1 (+github-actions)"
+BROWSER_UA = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/153.0.0.0 Safari/537.36"
 JETSTREAM = "wss://jetstream1.us-east.bsky.network/subscribe?wantedCollections=app.bsky.feed.post"
 
 MASTODON_TIMELINES = [
