@@ -1,0 +1,84 @@
+name: Pre-mint discovery adapter bus V2
+
+on:
+  schedule:
+    - cron: "23 */4 * * *"
+  workflow_dispatch:
+  push:
+    paths:
+      - "premint_discovery/**"
+      - ".github/workflows/premint-discovery-v2-bridge.yml"
+
+permissions:
+  contents: write
+
+concurrency:
+  group: premint-discovery-adapter-bus-v2
+  cancel-in-progress: true
+
+jobs:
+  collect:
+    runs-on: ubuntu-latest
+    timeout-minutes: 330
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install collector dependencies
+        run: python3 -m pip install --disable-pip-version-check --quiet "websockets>=13,<16" "pillow>=10,<12"
+
+      - name: Run persistent adapter bus
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          publish_snapshot () {
+            rm -rf /tmp/premint-publish
+            mkdir -p /tmp/premint-publish
+            cp /tmp/premint-latest.json /tmp/premint-publish/latest.json
+            cat > /tmp/premint-publish/README.md <<'EOF'
+          FEE100K DISCOVERY_ADAPTER_BUS_V2 public snapshot.
+          Public sources only. Account handles and raw account IDs are not stored.
+          Actor identifiers are one-way hashed. No wallet data, Supabase credentials,
+          Telegram credentials, private strategy thresholds, or auto-launch instructions
+          are present on this branch.
+          EOF
+            cd /tmp/premint-publish
+            git init -q
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git checkout -q -b premint-data
+            git add latest.json README.md
+            git commit -q -m "Update pre-mint discovery adapter bus snapshot"
+            git remote add origin "https://x-access-token:${GITHUB_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
+            git push --force -q origin HEAD:premint-discovery-data-v2
+            cd "$GITHUB_WORKSPACE"
+          }
+
+          # 160 x 90s = 4h continuous coverage. YouTube refreshes each cycle;
+          # Reddit/TikTok adapters self-throttle to protect public endpoints.
+          for i in $(seq 1 160); do
+            echo "adapter_cycle=$i started=$(date -u +%FT%TZ)"
+            python3 premint_discovery/collect_v2.py \
+              --output /tmp/premint-latest.json --duration 90 --cycle "$i"
+
+            python3 - <<'PY'
+          import json
+          p=json.load(open('/tmp/premint-latest.json'))
+          assert p.get('schema') == 'discovery_adapter_bus_v2'
+          privacy=p.get('privacy',{})
+          assert privacy.get('private_system_data') is False
+          assert privacy.get('private_strategy_thresholds') is False
+          assert privacy.get('account_handles_stored') is False
+          assert privacy.get('account_ids_stored') is False
+          assert p.get('policy',{}).get('auto_launch') is False
+          assert all(i.get('envelope_version') == 'DISCOVERY_ENVELOPE_V2' for i in p.get('items',[]))
+          print(p['summary'])
+          print(p['source_health'])
+          PY
+
+            publish_snapshot
+            echo "adapter_cycle=$i published=$(date -u +%FT%TZ)"
+          done
