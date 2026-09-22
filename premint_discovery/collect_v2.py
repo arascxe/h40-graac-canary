@@ -308,11 +308,16 @@ def collect_mastodon(rows, health):
         except Exception as e:
             health.append({"source": f"mastodon_public:{host}", "ok": False, "error": f"{type(e).__name__}:{str(e)[:140]}"})
 
-def collect_reddit_rss(rows, health):
+def collect_reddit_rss(rows, health, cycle=1):
     total = created = 0
     errors = []
     ns = {"atom": "http://www.w3.org/2005/Atom"}
-    for subreddit, feed in REDDIT_FEEDS:
+    # Shared GitHub runner IPs hit Reddit's anonymous RSS rate limit quickly.
+    # Keep r/all as the broad sensor and rotate one meme-heavy feed per refresh.
+    extras = REDDIT_FEEDS[2:] or REDDIT_FEEDS[1:]
+    rotating = extras[(max(1, cycle)-1) % len(extras)] if extras else None
+    selected_feeds = [REDDIT_FEEDS[0]] + ([rotating] if rotating else [])
+    for idx, (subreddit, feed) in enumerate(selected_feeds):
         url = f"https://www.reddit.com/r/{subreddit}/{feed}/.rss?limit=20"
         try:
             raw = request_bytes(
@@ -346,10 +351,13 @@ def collect_reddit_rss(rows, health):
                     created += 1
         except Exception as e:
             errors.append(f"r/{subreddit}:{type(e).__name__}:{str(e)[:80]}")
+        if idx + 1 < len(selected_feeds):
+            time.sleep(1.25)
     health.append({
         "source": "reddit_rss",
-        "ok": len(errors) < len(REDDIT_FEEDS),
-        "feeds": len(REDDIT_FEEDS),
+        "ok": total > 0,
+        "feeds_attempted": len(selected_feeds),
+        "feeds": [f"r/{s}/{f}" for s,f in selected_feeds],
         "matched": total,
         "new_items": created,
         **({"errors": errors[:4]} if errors else {}),
@@ -361,9 +369,11 @@ def collect_tiktok_creative_center(rows, health):
     video_created = 0
     errors = []
     common_headers = {
+        "User-Agent": BROWSER_UA,
         "Referer": TIKTOK_REFERER,
-        "Accept": "application/json",
+        "Accept": "application/json, text/plain, */*",
     }
+    api_shapes = []
 
     try:
         qs = urllib.parse.urlencode({
@@ -371,7 +381,12 @@ def collect_tiktok_creative_center(rows, health):
             "country_code": "US", "sort_by": "popular",
         })
         data = fetch_json(f"{TIKTOK_HASHTAG_API}?{qs}", headers=common_headers, timeout=15)
-        items = ((data.get("data") or {}).get("list") or [])
+        api_shapes.append({
+            "kind":"hashtag","code":data.get("code"),"message":str(data.get("message") or "")[:120],
+            "top_keys":sorted(list(data.keys()))[:20],
+            "data_keys":sorted(list((data.get("data") or {}).keys()))[:20],
+        })
+        items = ((data.get("data") or {}).get("list") or (data.get("data") or {}).get("hashtags") or [])
         for item in items:
             tag = str(item.get("hashtag_name") or "").strip().lstrip("#")
             if not tag:
@@ -406,6 +421,11 @@ def collect_tiktok_creative_center(rows, health):
             "country_code": "US", "order_by": "vv",
         })
         data = fetch_json(f"{TIKTOK_VIDEO_API}?{qs}", headers=common_headers, timeout=15)
+        api_shapes.append({
+            "kind":"video","code":data.get("code"),"message":str(data.get("message") or "")[:120],
+            "top_keys":sorted(list(data.keys()))[:20],
+            "data_keys":sorted(list((data.get("data") or {}).keys()))[:20],
+        })
         d = data.get("data") or {}
         videos = d.get("videos") or d.get("list") or []
         for item in videos:
@@ -439,6 +459,7 @@ def collect_tiktok_creative_center(rows, health):
         "hashtags": len(tags),
         "hashtag_items": tag_created,
         "video_items": video_created,
+        "api_shapes": api_shapes,
         **({"errors": errors} if errors else {}),
     })
     return tags[:8]
@@ -538,9 +559,9 @@ def collect_youtube_discovery(rows, health, seed_tags):
         **({"errors": errors[:4]} if errors else {}),
     })
 
-def collect_direct_sources(rows, health):
+def collect_direct_sources(rows, health, cycle):
     collect_mastodon(rows, health)
-    collect_reddit_rss(rows, health)
+    collect_reddit_rss(rows, health, cycle)
     seed_tags = collect_tiktok_creative_center(rows, health)
     collect_youtube_discovery(rows, health, seed_tags)
 
@@ -605,7 +626,7 @@ async def collect(duration, cycle):
     # Direct public discovery sources refresh every 4th 90s cycle (~6 min).
     run_direct = cycle <= 1 or cycle % 4 == 1
     if run_direct:
-        direct_task = asyncio.to_thread(collect_direct_sources, rows, health)
+        direct_task = asyncio.to_thread(collect_direct_sources, rows, health, cycle)
         await asyncio.gather(collect_jetstream(rows, duration, health), direct_task)
     else:
         await collect_jetstream(rows, duration, health)
