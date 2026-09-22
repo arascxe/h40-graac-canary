@@ -546,7 +546,7 @@ def collect_youtube_discovery(rows, health, seed_tags):
                 if age_s is not None:
                     created_at = (datetime.now(timezone.utc) - timedelta(seconds=age_s)).isoformat()
                 url = f"https://www.youtube.com/watch?v={video_id}"
-                text = f"{title} {published} query={query}"
+                text = f"{title} {published}"
                 buckets = buckets_for(text, [url])
                 matched += 1
                 if upsert(
