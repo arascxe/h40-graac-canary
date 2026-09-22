@@ -540,6 +540,12 @@ def collect_tiktok_browser_bridge(rows, health):
                 text=text,
                 links=[url],
                 buckets=["trend_seed"],
+                engagement_snapshot={
+                    "posts": item.get("posts"),
+                    "views": item.get("views"),
+                    "rank": item.get("rank"),
+                },
+                source_metadata={"category": item.get("category")},
             ):
                 created += 1
 
