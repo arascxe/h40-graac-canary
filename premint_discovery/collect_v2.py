@@ -613,11 +613,13 @@ def select_stratified(rows, limit=800):
             groups["other"].append(item)
 
     caps = {
-        "bluesky": 420,
-        "reddit": 140,
+        # Bluesky is supportive only in V2; cap it hard so it cannot dominate
+        # either inference or the 500MB Supabase free-tier hot state.
+        "bluesky": 30,
+        "reddit": 80,
         "youtube": 100,
-        "tiktok": 60,
-        "mastodon": 60,
+        "tiktok": 80,
+        "mastodon": 30,
         "other": 20,
     }
     out = []
