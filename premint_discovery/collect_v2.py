@@ -633,6 +633,10 @@ def select_stratified(rows, limit=800):
         for item in items:
             if item["post_hash"] in selected_hashes:
                 continue
+            # Hard V2 rule: never refill unused capacity with extra Bluesky.
+            # Unused capacity is safer than reintroducing source dominance.
+            if str(item.get("source") or "") == "bluesky_jetstream":
+                continue
             out.append(item)
             if len(out) >= limit:
                 break
