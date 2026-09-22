@@ -24,6 +24,8 @@ STOP = {
     "will","would","could","should","about","into","over","under","after","before","more","most","some",
     "video","viral","clip","watch","link","post","reel","reels","tweet","thread","news","today","new",
     "official","original","youtube","tiktok","instagram","twitter","reddit","bluesky","http","https","www",
+    "ago","day","days","hour","hours","minute","minutes","week","weeks","month","months","year","years",
+    "views","view","posts","post","rank","popular","trending","trend",
 }
 DERIVATIVE_ORDER = ["remix","template","parody","derivative","reaction","meme","viral"]
 
@@ -178,7 +180,8 @@ def derivative_types(buckets):
     return [x for x in DERIVATIVE_ORDER if x in b]
 
 def build_envelope(*, source, post_hash, actor_hash, published_at, first_observed_at,
-                   last_observed_at, text, links, buckets, media_url=None, parent_url=None):
+                   last_observed_at, text, links, buckets, media_url=None, parent_url=None,
+                   engagement_snapshot=None, source_metadata=None):
     clean = (text or "").strip()
     toks = text_tokens(clean)
     tfp = simhash64(toks)
@@ -224,6 +227,8 @@ def build_envelope(*, source, post_hash, actor_hash, published_at, first_observe
         "derivative_types": derivatives,
         "parent_object_url": normalize_object_url(parent_url),
         "object_hint_key": object_hint,
+        "engagement_snapshot": engagement_snapshot or {},
+        "source_metadata": source_metadata or {},
         "provenance": {
             "public_only": True,
             "actor_identifier_hashed": True,
