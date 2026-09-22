@@ -53,6 +53,7 @@ REDDIT_FEEDS = [
 TIKTOK_HASHTAG_API = "https://ads.tiktok.com/creative_radar_api/v1/popular_trend/hashtag/list"
 TIKTOK_VIDEO_API = "https://ads.tiktok.com/creative_radar_api/v1/popular_trend/list"
 TIKTOK_REFERER = "https://ads.tiktok.com/business/creativecenter/inspiration/popular/pc/en"
+TIKTOK_BROWSER_BRIDGE = "https://raw.githubusercontent.com/arascxe/h40-graac-canary/tiktok-discovery-data-v2/latest.json"
 YOUTUBE_SEARCH_API = "https://www.youtube.com/youtubei/v1/search"
 
 ALLOWED_LINK_HOSTS = {
@@ -506,6 +507,70 @@ def parse_youtube_video_renderers(data):
             if video.get("videoId"):
                 yield video
 
+
+def collect_tiktok_browser_bridge(rows, health):
+    created = matched = 0
+    try:
+        payload = fetch_json(TIKTOK_BROWSER_BRIDGE, headers={"Accept":"application/json"}, timeout=12)
+        if payload.get("schema") != "tiktok_cc_browser_seed_v2":
+            raise ValueError("unexpected_schema")
+        generated_at = payload.get("generated_at") or now_iso()
+
+        for item in payload.get("hashtags") or []:
+            tag = str(item.get("name") or "").strip().lstrip("#")
+            if not tag:
+                continue
+            matched += 1
+            url = str(item.get("url") or f"https://www.tiktok.com/tag/{urllib.parse.quote(tag)}")
+            text = f"#{tag} posts={item.get('posts')} views={item.get('views')} category={item.get('category') or ''}"
+            if upsert(
+                rows,
+                source="tiktok_cc_browser:hashtag",
+                actor_id=None,
+                post_id=f"hashtag:{tag.lower()}:{generated_at[:13]}",
+                created_at=generated_at,
+                text=text,
+                links=[url],
+                buckets=["trend_seed"],
+            ):
+                created += 1
+
+        for item in payload.get("videos") or []:
+            url = str(item.get("url") or "").strip()
+            vid = str(item.get("video_id") or "").strip()
+            if not url or not vid:
+                continue
+            matched += 1
+            text = str(item.get("text") or "")
+            if upsert(
+                rows,
+                source="tiktok_cc_browser:video",
+                actor_id=None,
+                post_id=f"video:{vid}",
+                created_at=generated_at,
+                text=text,
+                links=[url],
+                buckets=buckets_for(text,[url]) + ["direct_video_seed"],
+                media_url=str(item.get("thumbnail_url") or "") or None,
+            ):
+                created += 1
+
+        health.append({
+            "source":"tiktok_cc_browser_bridge",
+            "ok": matched > 0,
+            "matched": matched,
+            "new_items": created,
+            "generated_at": generated_at,
+            "hashtags": len(payload.get("hashtags") or []),
+            "videos": len(payload.get("videos") or []),
+        })
+    except Exception as e:
+        health.append({
+            "source":"tiktok_cc_browser_bridge",
+            "ok":False,
+            "error":f"{type(e).__name__}:{str(e)[:160]}",
+        })
+
 def collect_youtube_discovery(rows, health, seed_tags):
     queries = ["viral meme", "internet meme", "remix", "parody", "funny shorts"]
     queries += [f"#{x}" for x in seed_tags[:3]]
@@ -577,10 +642,13 @@ def collect_direct_sources(rows, health, cycle):
     # YouTube is the low-latency direct sensor. Reddit/TikTok refresh less often
     # to respect public endpoint limits; Mastodon is supportive, not primary.
     seed_tags = []
+    collect_tiktok_browser_bridge(rows, health)
     if cycle <= 1 or cycle % 2 == 1:
         collect_mastodon(rows, health)
     if cycle <= 1 or cycle % 4 == 1:
         collect_reddit_rss(rows, health, cycle)
+        # Keep the direct-HTTP Creative Center probe for health diagnostics;
+        # it does not contribute items while TikTok returns 40101.
         seed_tags = collect_tiktok_creative_center(rows, health)
     collect_youtube_discovery(rows, health, seed_tags)
 
