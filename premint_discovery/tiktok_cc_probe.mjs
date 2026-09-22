@@ -81,3 +81,5 @@ try {
 
 console.log(JSON.stringify(out));
 if (!out.page_ok) process.exitCode = 2;
+
+// smoke-trigger v2
