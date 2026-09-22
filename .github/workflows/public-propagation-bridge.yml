@@ -13,7 +13,7 @@ permissions:
   contents: write
 
 concurrency:
-  group: public-propagation-bridge
+  group: public-propagation-bridge-v2
   cancel-in-progress: true
 
 jobs:
@@ -52,7 +52,7 @@ jobs:
             git add latest.json README.md
             git commit -q -m "Update public propagation snapshot"
             git remote add origin "https://x-access-token:${GITHUB_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
-            git push --force -q origin HEAD:propagation-data
+            git push --force -q origin HEAD:propagation-data-v2
             cd "$GITHUB_WORKSPACE"
           }
 
