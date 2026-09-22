@@ -666,3 +666,5 @@ def main():
 
 if __name__ == "__main__":
     main()
+
+# smoke-trigger: 2026-09-23T00:00Z
