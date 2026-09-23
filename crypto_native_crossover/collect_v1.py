@@ -4,6 +4,8 @@ An item observed here is NOT verified independent demand or evidence of a $100k 
 No account handles, raw account IDs, private keys, thresholds or auto-launch logic are published.
 """
 import argparse
+import asyncio
+import time
 import hashlib
 import html
 import json
@@ -215,6 +217,92 @@ def parse_bluesky_search(raw, query, observation_time):
 
 BLUESKY_SEARCH_TERMS=("memecoin","pumpfun")
 
+CRYPTO_NATIVE_TERMS = re.compile(r"\b(memecoin|meme coin|pumpfun|pump\.fun|solana meme|minted|token launch|launchpad)\b", re.I)
+
+async def collect_public_bluesky_jetstream(observed, seconds=18):
+    """A bounded *new-post* firehose window; keyword matches are only shadow evidence."""
+    try:
+        import websockets
+    except ImportError:
+        return [], {"surface":"bluesky:jetstream_crypto","ok":False,"error_type":"WEBSOCKETS_NOT_INSTALLED"}
+    items={}
+    messages=0
+    started=time.monotonic()
+    error=None
+    try:
+        async with websockets.connect(
+          "wss://jetstream1.us-east.bsky.network/subscribe?wantedCollections=app.bsky.feed.post",
+          max_size=1_000_000,ping_interval=20,ping_timeout=12,open_timeout=12,close_timeout=3
+        ) as ws:
+            while time.monotonic()-started<seconds:
+                try:
+                    raw=await asyncio.wait_for(ws.recv(),timeout=2)
+                except asyncio.TimeoutError:
+                    continue
+                if not isinstance(raw,str):
+                    continue
+                messages+=1
+                try:
+                    evt=json.loads(raw)
+                    commit=evt.get("commit") or {}
+                    if evt.get("kind")!="commit" or commit.get("collection")!="app.bsky.feed.post" or commit.get("operation")!="create":
+                        continue
+                    rec=commit.get("record") or {}
+                    text=str(rec.get("text") or "")
+                    if not CRYPTO_NATIVE_TERMS.search(text):
+                        continue
+                    did=str(evt.get("did") or "")
+                    rkey=str(commit.get("rkey") or "")
+                    published=rec.get("createdAt")
+                    if not did or not rkey or not timely_public_post(published,observed):
+                        continue
+                    raw_links=URLS.findall(text)
+                    for facet in rec.get("facets") or []:
+                        for feat in facet.get("features") or []:
+                            if isinstance(feat,dict) and feat.get("uri"):
+                                raw_links.append(feat["uri"])
+                    emb=rec.get("embed") or {}
+                    ext=emb.get("external") if isinstance(emb,dict) else {}
+                    if isinstance(ext,dict) and ext.get("uri"):
+                        raw_links.append(ext["uri"])
+                    urls={object_url(u) for u in raw_links if isinstance(u,str)}
+                    urls.discard(None)
+                    clean = EMAIL.sub("[redacted-email]",
+                          MENTION.sub("[mention]"," ".join(URLS.sub(" ",text).split())))
+                    tokens=[]
+                    for t in WORD.findall(clean.lower()):
+                        if t not in STOP and not t.isdigit() and t not in tokens and len(t)<36:
+                            tokens.append(t)
+                        if len(tokens)>=24: break
+                    uri="at://"+did+"/app.bsky.feed.post/"+rkey
+                    p={
+                      "post_hash":hid("bluesky_search:"+uri),
+                      "actor_hash":hid("bluesky_search:"+did),
+                      "source_surface":"bluesky:jetstream_crypto",
+                      "source_reliability":"KEYWORD_ONLY_SPAM_PRONE_NOT_BUYER_PROOF",
+                      "published_at":published,
+                      "first_observed_at":observed,
+                      "linked_object_urls":sorted(urls)[:8],
+                      "semantic_tokens":tokens,
+                      "text_excerpt":clean[:180],
+                      "has_exact_outbound_object":bool(urls)
+                    }
+                    items[p["post_hash"]]=p
+                    if len(items)>=55:
+                        break
+                except Exception:
+                    continue
+    except Exception as ex:
+        error=type(ex).__name__
+    return list(items.values()),{
+       "surface":"bluesky:jetstream_crypto",
+       "ok":error is None,"messages_seen":messages,
+       "fresh_keyword_posts":len(items),
+       "duration_s":round(time.monotonic()-started,1),
+       "reliability":"LOW",
+       **({"error_type":error} if error else {})
+    }
+
 def collect(timeout=12):
     items, health = {}, []
     observed = now()
@@ -273,6 +361,10 @@ def collect(timeout=12):
         except Exception as ex:
             health.append({"surface":"bluesky:search/"+term,"ok":False,
                            "error_type":type(ex).__name__})
+    bsky_jet_items,bsky_health=asyncio.run(collect_public_bluesky_jetstream(observed,seconds=18))
+    for post in bsky_jet_items:
+        items[post["post_hash"]]=post
+    health.append(bsky_health)
     return {
         "schema":"fee100k_crypto_native_crossover_v1",
         "generated_at":now(),
