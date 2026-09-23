@@ -142,7 +142,7 @@ def parse_reddit_oauth_entries(entries, subreddit, reliability, observed):
         urls.discard(None)
         urls.discard(self_object)
         clean=" ".join(URLS.sub(" ",title+" "+body).split())
-        clean=re.sub(r"(?<!\\w)(?:/u/|u/)[A-Za-z0-9_-]+","[mention]",clean)
+        clean=re.sub(r"(?<![A-Za-z0-9_])(?:/u/|u/)[A-Za-z0-9_-]+","[mention]",clean)
         clean=EMAIL.sub("[redacted-email]",MENTION.sub("[mention]",clean))
         toks=[]
         for t in WORD.findall(clean.lower()):
@@ -168,6 +168,8 @@ def parse_reddit_oauth_entries(entries, subreddit, reliability, observed):
 MASTODON_TAGS = [
     ("mastodon.social", "memecoin"),
     ("mastodon.social", "solana"),
+    ("mastodon.social", "cryptocurrency"),
+    ("mstdn.social", "crypto"),
 ]
 
 def parse_mastodon_tag(raw, instance, tag, observation_time):
@@ -437,8 +439,38 @@ def collect(timeout=12,prior_cursor_us=None):
         "policy":{"no_self_post_as_crossover":True,"links_are_evidence_only":True,
                   "no_inferred_buys":True,"no_text_match_as_verified":True},
         "source_health":health,
-        "items":list(items.values())[:100]
+        # Fixed per-source caps preserve weak/non-linked observations for FN audit.
+        # The snapshot is a screened sample, not platform prevalence.
+        "items":choose_source_balanced_items(items,limit=100)
     }
+
+
+def choose_source_balanced_items(items,limit=100):
+    groups={"bluesky":[],"reddit":[],"mastodon":[]}
+    for item in items.values():
+        surface=item.get("source_surface") or ""
+        src="bluesky" if surface.startswith("bluesky:") else (
+            "reddit" if surface.startswith("reddit:") else "mastodon")
+        groups[src].append(item)
+    # Within each source, retain both external object links and unlinked weak signals.
+    out=[]
+    for src,cap in (("bluesky",75),("reddit",15),("mastodon",10)):
+        data=groups[src]
+        linked=sorted((x for x in data if x.get("has_exact_outbound_object")),
+            key=lambda x:x.get("published_at") or "",reverse=True)
+        unlinked=sorted((x for x in data if not x.get("has_exact_outbound_object")),
+            key=lambda x:x.get("published_at") or "",reverse=True)
+        quota_link=round(cap*0.65)
+        selection=linked[:quota_link]+unlinked[:cap-quota_link]
+        used={x["post_hash"] for x in selection}
+        if len(selection)<cap:
+            for x in linked[quota_link:]+unlinked[cap-quota_link:]:
+                if x["post_hash"] not in used:
+                    selection.append(x)
+                    used.add(x["post_hash"])
+                if len(selection)>=cap: break
+        out.extend(selection[:cap])
+    return out[:limit]
 
 def self_test():
     rss = ('''<feed xmlns="http://www.w3.org/2005/Atom"><entry><id>t3_abcd</id>
@@ -471,6 +503,16 @@ def self_test():
     b=parse_bluesky_search(bsky_fixture,"memecoin","2026-09-23T16:02:00Z")
     assert len(b)==1 and b[0]["linked_object_urls"]==["x.com/status/123456789"]
     assert not timely_public_post("2026-09-20T16:01:00Z","2026-09-23T16:02:00Z")
+    examples={}
+    for i in range(20):
+        examples[str(i)]={"post_hash":str(i),"source_surface":"bluesky:jetstream_crypto",
+            "published_at":"2026-09-23T16:02:00Z","has_exact_outbound_object":i<10}
+    zz=choose_source_balanced_items(examples)
+    assert len(zz)==20 and sum(bool(x["has_exact_outbound_object"]) for x in zz)==10
+    parsed=parse_reddit_oauth_entries([{"id":"abcd","author":"author","created_utc":1790179200,
+       "title":"remix","selftext":"see u/test https://youtu.be/VidA123"}],
+       "solana","SOLANA_GENERAL","2026-09-23T16:01:00Z")
+    assert parsed and "u/test" not in parsed[0]["text_excerpt"]
     print("PASS: self-post exclusion, exact links, fresh-only timestamps, privacy redaction, Bluesky parsing")
 
 def main():
