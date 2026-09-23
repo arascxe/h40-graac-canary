@@ -110,3 +110,7 @@ If access passes, use the frozen 210-mint baseline and, at or after 2026-09-24 2
 3. Preserve the canonical 20, its matched controls, the distinct exploratory 20 and the frozen 210-launch cohort. The 210-launch 24-hour outcome gate cannot be evaluated before 2026-09-24 22:13 UTC; do not duplicate it hourly.
 4. After current long Actions jobs clear, complete the remaining three preselected mint-specific creator-vault/recipient/claim access checks. Do not open a broad historical study until the 2+2 access gate is closed.
 5. No capital action is licensed. A real pilot still requires a manually verified independent pre-mint exact-object crossover, family vacancy, canonical fee route and explicit user approval.
+
+### 23:48 UTC follow-up refinement
+
+First-cycle publication for 35935251897 passed. Do not rerun it. The remaining operational proof is passive: confirm that research-note commits no longer create adapter-bus runs and that the next genuine schedule proceeds without cancellation. Continue prioritizing the separate stale crypto cursor and the remaining three fee-access cases only after long jobs clear.
