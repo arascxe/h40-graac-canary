@@ -1,0 +1,25 @@
+name: TikTok CC video network diagnostic
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - "premint_discovery/tiktok_cc_video_network_probe_v1.mjs"
+      - ".github/workflows/tiktok-cc-video-network-diagnostic.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  diagnose:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install public browser dependencies
+        run: |
+          npm init -y >/dev/null 2>&1
+          npm install --no-save --no-audit --no-fund playwright@1.58.2
+          npx playwright install --with-deps chromium
+      - name: Diagnose TikTok video page
+        run: node premint_discovery/tiktok_cc_video_network_probe_v1.mjs
