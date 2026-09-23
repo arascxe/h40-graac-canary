@@ -4,10 +4,6 @@ on:
   schedule:
     - cron: "7,22,37,52 * * * *"
   workflow_dispatch:
-  push:
-    paths:
-      - "crypto_native_crossover/**"
-      - ".github/workflows/crypto-native-crossover-v1.yml"
 
 permissions:
   contents: write
