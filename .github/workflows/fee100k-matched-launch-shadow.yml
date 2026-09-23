@@ -1,0 +1,73 @@
+name: FEE100K matched launch shadow
+
+on:
+  push:
+    paths:
+      - .github/workflows/fee100k-matched-launch-shadow.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Restore existing read-only census artifact
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          mkdir -p runtime
+          gh run download 35851840827 -n mdrtf-state -D runtime
+
+      - name: Bounded same-window launch audit
+        run: |
+          python3 - <<'PY'
+          import datetime as dt
+          import json
+          import sqlite3
+          from pathlib import Path
+
+          db = Path('runtime/mdrtf_future_ledger.sqlite3')
+          conn = sqlite3.connect(f'file:{db}?mode=ro', uri=True)
+          conn.row_factory = sqlite3.Row
+          tables = {r[0] for r in conn.execute("select name from sqlite_master where type='table'")}
+          required = {'pump_launches', 'pump_raw_trades', 'pump_trade_fetches', 'pump_census_cuts'}
+          if not required <= tables:
+              raise SystemExit('missing census tables: ' + repr(sorted(required - tables)))
+          target = '2ekqDh2VNP5mfMUh7fngof1APUBmkAsJJATmDZBapump'
+          row = conn.execute('select * from pump_launches where mint=?', (target,)).fetchone()
+          if row:
+              center = dt.datetime.fromisoformat(row['created_at'].replace('Z', '+00:00'))
+              selection = 'EPEP_CREATION_PLUS_MINUS_15M'
+          else:
+              center = dt.datetime(2026, 9, 23, 16, 45, tzinfo=dt.timezone.utc)
+              selection = 'POOL_CREATION_PLUS_MINUS_15M_EPEP_MINT_ABSENT'
+          start = (center - dt.timedelta(minutes=15)).isoformat().replace('+00:00', 'Z')
+          end = (center + dt.timedelta(minutes=15)).isoformat().replace('+00:00', 'Z')
+          launches = conn.execute('select mint,created_at,first_seen_at,creator,name,symbol,trade_coverage_state from pump_launches where created_at>=? and created_at<? order by created_at,mint', (start,end)).fetchall()
+          cuts = conn.execute('select source_state,count(*) n from pump_census_cuts where request_started_at>=? and request_started_at<? group by source_state', (start,end)).fetchall()
+          # Deterministic controls were selected from launch time, without using outcome labels.
+          controls = sorted((r for r in launches if r['mint'] != target), key=lambda r: r['mint'])[:12]
+          selected = ([row] if row else []) + controls
+          cases = []
+          for launch in selected:
+              birth = dt.datetime.fromisoformat(launch['created_at'].replace('Z','+00:00'))
+              stop = (birth + dt.timedelta(minutes=5)).isoformat().replace('+00:00','Z')
+              flow = conn.execute('select count(*) trades,count(distinct wallet) wallets,sum(usd_value) gross_usd from pump_raw_trades where mint=? and block_timestamp>=? and block_timestamp<?', (launch['mint'],launch['created_at'],stop)).fetchone()
+              fetches = conn.execute('select coverage_state,count(*) n from pump_trade_fetches where mint=? group by coverage_state', (launch['mint'],)).fetchall()
+              cases.append({'mint':launch['mint'],'created_at':launch['created_at'],'first_seen_at':launch['first_seen_at'],'name':launch['name'],'creator':launch['creator'],'first_5m_trades_observed':flow['trades'],'first_5m_wallets_observed':flow['wallets'],'first_5m_gross_usd_observed':flow['gross_usd'],'trade_fetch_coverage':{r['coverage_state']:r['n'] for r in fetches}})
+          out = {'artifact_run':35851840827,'selection':selection,'window':[start,end],'launches_in_window':len(launches),'census_cut_states':{r['source_state']:r['n'] for r in cuts},'cases':cases,'note':'Missing trades or missing pair are UNKNOWN, never zero outcome. Current fee and premint distribution are not proven.'}
+          Path('matched-launch-shadow.json').write_text(json.dumps(out,indent=2,default=str))
+          print(json.dumps(out,default=str))
+          PY
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: matched-launch-shadow
+          path: matched-launch-shadow.json
+          retention-days: 7
+          if-no-files-found: ignore
