@@ -31,3 +31,5 @@ Security footnote: `fee100k_private` has disabled RLS warnings, but anon/auth sc
 ### Snapshot correction
 
 GitHub source publication resumed at 19:42:30 UTC, so investigate why the 95-second/80,000-message Jetstream replay still did not catch up and why its eight published items contain zero exact external-object URLs. First verify the 19:42 snapshot's bridge request status using a single small SQL probe only after connection health recovers, or independent non-Postgres logs if available. Keep coverage PARTIAL/UNKNOWN until cursor lag, source completeness and bridge ingestion are measured. Do not retry Reddit/AppView access controls.
+
+Jetstream replay is the immediate highest-information bottleneck: end cursor is 17:29:52 UTC at 19:42:30 generation, ~2h12m37s lag despite 80,000 messages/95s. Inspect collector's cursor checkpoint, run frequency and per-run budget in source; model whether the current allowed throughput can ever catch up with incoming events. Test a bounded source-only change in shadow with no retroactive `first_observed_at` rewrite. Do not interpret snapshot generated time as post freshness.
