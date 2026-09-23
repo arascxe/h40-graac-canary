@@ -79,3 +79,12 @@ Read `fee_audit/SAME_WINDOW_SHADOW_2026-09-23.md` before another high/low compar
 ## 2026-09-23 22:40 UTC — income decision takes priority
 
 Read [the current no-go decision](fee_audit/INCOME_DECISION_2026-09-23.md). Do not expand generic source or trader-dashboard infrastructure in the next work session. At/after 2026-09-24 22:13 UTC, follow the exact frozen 210 mints for same-window 24h outcomes and unknown coverage, compare high cases to low controls, attribute independent creator-excluded turnover and exact fee recipient/claims. If no solo no-audience acquisition mechanism survives, report UNSUPPORTED_FOR_THIS_OPERATING_SETUP and switch the next first-dollar study away from creator-fee launching. No live mint, public promotion or capital action without a reviewable candidate and user approval.
+
+
+## 2026-09-23 22:41 UTC — capacity gate before any new source run
+
+Do **not** launch another shadow or rerun yet. GitHub metadata showed three long workflows still `in_progress` (pre-mint adapter bus run 35924345727 since 21:45, TikTok adapter 35911657263 since 19:47, public propagation bridge 35910703156 since 19:38) and MDRTF run 35921125436 still `pending` since 21:13. Between 19:42 and 22:27 the 15-minute crypto schedule produced only two visible runs, while its replay cursor fell from ~2h12m to 4h32m behind. This establishes insufficient **effective** scheduling capacity/freshness, although the exact GitHub queue cause is not proven.
+
+The single highest-value safe engineering candidate remains narrowing pre-mint adapter-bus push paths so research-note commits cannot cancel and restart its four-hour collector. Before a production edit, require a static trigger test and wait for the current bus/pending MDRTF state to clear. Acceptance: documentation-only changes do not trigger; collector code/config changes still do; schedule, dispatch, snapshot schema and data branch remain identical. Rollback is restoration of the prior workflow file.
+
+Do not add cadence or another live-tail sample until capacity clears. Economic priority remains the frozen 210 follow-up at/after 2026-09-24 22:13 UTC and the current no-go decision. Database rule remains log-first: family-lane 57014 repeated at 21:45 and 22:05; during continued multi-timeout pressure allow at most one small read-only SQL probe and no EXPLAIN/full count/rerun.
