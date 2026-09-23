@@ -27,3 +27,7 @@ Security footnote: `fee100k_private` has disabled RLS warnings, but anon/auth sc
 2. When stable, compare individual job duration and wait events with schedule collisions. Prioritize a single small shadow rewrite of snapshot pruning or 12-hour token refresh, with unchanged evidence retention and explicit rollback. Test on real bounded data, then measure job latency and source freshness before any production rollout.
 3. Independently verify a fresh scheduled crypto workflow snapshot and bridge response; a past push success does not close the data gap. Resume frozen 20-vs-control evaluation only in periods with timestamped source coverage. Keep separate exploration cohort and no inferred fee income.
 4. The hourly automation now uses log-first fail-fast during database incidents and checks overlap with the four-hour development task. This is a task-prompt change, not a repair to production services.
+
+### Snapshot correction
+
+GitHub source publication resumed at 19:42:30 UTC, so investigate why the 95-second/80,000-message Jetstream replay still did not catch up and why its eight published items contain zero exact external-object URLs. First verify the 19:42 snapshot's bridge request status using a single small SQL probe only after connection health recovers, or independent non-Postgres logs if available. Keep coverage PARTIAL/UNKNOWN until cursor lag, source completeness and bridge ingestion are measured. Do not retry Reddit/AppView access controls.
