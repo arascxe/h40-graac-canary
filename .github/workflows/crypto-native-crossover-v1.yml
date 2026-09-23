@@ -1,0 +1,68 @@
+name: FEE100K crypto-native crossover V1
+
+on:
+  schedule:
+    - cron: "7,22,37,52 * * * *"
+  workflow_dispatch:
+  push:
+    paths:
+      - "crypto_native_crossover/**"
+      - ".github/workflows/crypto-native-crossover-v1.yml"
+
+permissions:
+  contents: write
+
+concurrency:
+  group: fee100k-crypto-native-crossover-v1
+  cancel-in-progress: false
+
+jobs:
+  collect:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - name: Offline privacy and matching self-test
+        run: python3 crypto_native_crossover/collect_v1.py --self-test
+      - name: Collect public crypto-community object citations
+        run: python3 crypto_native_crossover/collect_v1.py --out /tmp/crossover.json
+      - name: Enforce privacy and payload bounds
+        run: |
+          python3 - <<'PY'
+          import json
+          p=json.load(open('/tmp/crossover.json'))
+          assert p['schema']=='fee100k_crypto_native_crossover_v1'
+          assert p['policy']['no_inferred_buys']
+          assert p['policy']['no_self_post_as_crossover']
+          assert not p['privacy']['handles_stored']
+          assert not p['privacy']['raw_ids_stored']
+          assert len(p['items'])<=100
+          assert all(len(i.get('linked_object_urls', [])) <=8 for i in p['items'])
+          print(json.dumps({'count':len(p['items']),'health':p['source_health']}))
+          PY
+      - name: Publish bounded public observation snapshot
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/fee100k-crossover-publish
+          cp /tmp/crossover.json /tmp/fee100k-crossover-publish/latest.json
+          echo "Public crypto community observations only. No verified buyer inference. No auto-launch. Actors hashed; no raw account IDs." >/tmp/fee100k-crossover-publish/README.md
+          cd /tmp/fee100k-crossover-publish
+          git init -q
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git checkout -q -b crossover-data
+          git add latest.json README.md
+          git commit -q -m "Crypto-native crossover observation snapshot"
+          git remote add origin "https://x-access-token:${GITHUB_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
+          for attempt in 1 2 3; do
+            if git push --force -q origin HEAD:fee100k-crypto-crossover-data-v1; then
+              echo "Published fee100k-crypto-crossover-data-v1"
+              exit 0
+            fi
+            sleep $((attempt*3))
+          done
+          echo "::error::CROSSOVER_PUBLISH_FAILED: preserve coverage gap, do not backfill"
+          exit 1
