@@ -39,3 +39,5 @@ Hypothesis: the prior SQL timeouts might be confined to one maintenance statemen
 ### 19:42 snapshot freshness recheck
 
 Fetched the current snapshot branch after the incident checkpoint, rather than reusing the 17:03 audit. A new 19:42:30 UTC snapshot exists (blob `4f5948c7b3a34478c10c1441c8888ea6c0326cb1`), with 8 published items and zero exact outbound-object URL flags. The Jetstream source itself labels catch-up false and baseline unknown after an 80,000-message time-limited replay; 0 fresh keyword posts. This falsifies the narrow hypothesis that no newer GitHub snapshot exists. It does not establish complete coverage or a working Supabase bridge, and cannot validate 0 crossover in the frozen cohort.
+
+Cursor-unit sanity check: interpreted Jetstream microseconds as Unix time (`us/1000` milliseconds). Start 17:03:20.429, end 17:29:52.937 UTC; generated 19:42:30.003 UTC, giving ~2h12m37s end-cursor lag. This is a deterministic transform of snapshot fields, not an estimated social signal.
