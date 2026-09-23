@@ -163,10 +163,10 @@ def _phash_image(img):
 
 def image_phash_views(url):
     if not url or Image is None:
-        return {"full":None,"center":None,"square":None}
+        return {"full":None,"center":None,"center60":None,"top87":None,"square":None}
     if url in _PHASH_CACHE:
         return _PHASH_CACHE[url]
-    out = {"full":None,"center":None,"square":None}
+    out = {"full":None,"center":None,"center60":None,"top87":None,"square":None}
     try:
         data = _download(url)
         if not data:
@@ -180,6 +180,16 @@ def image_phash_views(url):
         dx,dy = int(w*0.10),int(h*0.10)
         if w-2*dx >= 16 and h-2*dy >= 16:
             out["center"] = _phash_image(src.crop((dx,dy,w-dx,h-dy)))
+
+        # 60% center crop tolerates stronger (~20%/side) social-media crops.
+        dx2,dy2 = int(w*0.20),int(h*0.20)
+        if w-2*dx2 >= 16 and h-2*dy2 >= 16:
+            out["center60"] = _phash_image(src.crop((dx2,dy2,w-dx2,h-dy2)))
+
+        # Top 87% view tolerates a common lower caption/banner band.
+        top_h = int(h*0.87)
+        if top_h >= 16:
+            out["top87"] = _phash_image(src.crop((0,0,w,top_h)))
 
         # Center square tolerates portrait/landscape re-framing across surfaces.
         side = min(w,h)
@@ -206,7 +216,7 @@ def build_envelope(*, source, post_hash, actor_hash, published_at, first_observe
     tfp = simhash64(toks)
     normalized_links = [x for x in (normalize_object_url(u) for u in (links or [])) if x]
     canonical = normalized_links[0] if normalized_links else None
-    phv = image_phash_views(media_url) if media_url else {"full":None,"center":None,"square":None}
+    phv = image_phash_views(media_url) if media_url else {"full":None,"center":None,"center60":None,"top87":None,"square":None}
     ph = phv.get("full")
     derivatives = derivative_types(buckets)
     adapter = source.split(":",1)[0]
@@ -243,6 +253,8 @@ def build_envelope(*, source, post_hash, actor_hash, published_at, first_observe
         "media_url": media_url,
         "image_phash": ph,
         "image_phash_center": phv.get("center"),
+        "image_phash_center60": phv.get("center60"),
+        "image_phash_top87": phv.get("top87"),
         "image_phash_square": phv.get("square"),
         "image_bands": image_bands,
         "derivative_type": derivatives[0] if derivatives else None,
