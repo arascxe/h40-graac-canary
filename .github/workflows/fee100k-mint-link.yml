@@ -1,0 +1,27 @@
+name: FEE100K single mint fee-flow linkage
+on:
+  push:
+    paths:
+      - ".github/workflows/fee100k-mint-link.yml"
+permissions:
+  contents: read
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    steps:
+      - name: Verify sampled trade's mint, pool and fee vault
+        run: |
+          python3 - <<'PY'
+          import urllib.request,json,datetime
+          sig="2pZ8Yy4dAWatL8afGUVZu9BdHNxJhK6243diSYPMbhce6tAwsy1Y5VoVCMrcq6rTtLPJHrzpyXJdVjsrT8hzj29w"
+          d=json.dumps({"jsonrpc":"2.0","id":1,"method":"getTransaction","params":[sig,{"encoding":"jsonParsed","maxSupportedTransactionVersion":0}]}).encode()
+          req=urllib.request.Request("https://api.mainnet-beta.solana.com",d,{"Content-Type":"application/json","User-Agent":"FEE100K-readonly-mint-link"})
+          with urllib.request.urlopen(req,timeout=15) as r: tx=json.load(r)["result"]
+          msg=tx["transaction"]["message"]; meta=tx["meta"]
+          keys=[x.get("pubkey") if isinstance(x,dict) else x for x in msg["accountKeys"]]
+          mints=sorted(set(x.get("mint") for x in (meta.get("preTokenBalances") or [])+(meta.get("postTokenBalances") or []) if x.get("mint")))
+          out={"signature":sig,"block_time_utc":datetime.datetime.fromtimestamp(tx["blockTime"],datetime.timezone.utc).isoformat(),"pool_in_account_keys":"5jYdJBnSrtFTmE6C2nVHmPxKjgSdGTAWw4LodTHUbE74" in keys,"expected_base_mint_in_token_balances":"BP4Wic5LNKsqpmiREW6uNVEC16juvFCSd4WzVBatpump" in mints,"mints":mints,"fee_vault_in_account_keys":"4D6fMFiU22Pk73foTL5dtyu1XjX9nFnRK4YCedxHpdiK" in keys,"error":meta.get("err")}
+          print(json.dumps(out))
+          assert out["pool_in_account_keys"] and out["expected_base_mint_in_token_balances"] and out["fee_vault_in_account_keys"] and out["error"] is None
+          PY
