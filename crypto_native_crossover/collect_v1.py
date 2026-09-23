@@ -105,6 +105,52 @@ def parse_atom(raw, subreddit, reliability, observation_time):
         })
     return out
 
+# Public tagged discussions are an additional WEAK sensor. A tag does not
+# establish a buyer, unique meme identity or genuine independent demand.
+MASTODON_TAGS = [
+    ("mastodon.social", "memecoin"),
+    ("mastodon.social", "solana"),
+]
+
+def parse_mastodon_tag(raw, instance, tag, observation_time):
+    data = json.loads(raw.decode("utf-8"))
+    if not isinstance(data, list):
+        raise ValueError("unexpected mastodon tagged timeline shape")
+    out = []
+    for status in data[:20]:
+        if not isinstance(status, dict) or status.get("reblog") is not None:
+            continue
+        permalink = str(status.get("url") or "")
+        if not permalink:
+            continue
+        user = str((status.get("account") or {}).get("id") or "")
+        content = html.unescape(str(status.get("content") or ""))
+        clean = TAGS.sub(" ", content)
+        urls = {object_url(u) for u in URLS.findall(content)}
+        urls.discard(None)
+        urls.discard(object_url(permalink))
+        clean = URLS.sub(" ", clean)
+        clean = " ".join(clean.split())
+        clean = EMAIL.sub("[redacted-email]", MENTION.sub("[mention]", clean))
+        tokens = []
+        for t in WORD.findall(clean.lower()):
+            if t not in STOP and not t.isdigit() and t not in tokens and len(t)<36:
+                tokens.append(t)
+            if len(tokens)>=24:
+                break
+        out.append({
+            "post_hash":hid("mastodon:"+instance+":"+permalink),
+            "actor_hash":hid("mastodon:"+instance+":"+user) if user else None,
+            "source_surface":"mastodon:tag/"+tag+"@"+instance,
+            "source_reliability":"TAG_MEME_PROMOTION_SPAM_PRONE",
+            "published_at":status.get("created_at"),
+            "first_observed_at":observation_time,
+            "linked_object_urls":sorted(urls)[:8],
+            "semantic_tokens":tokens,"text_excerpt":clean[:180],
+            "has_exact_outbound_object":bool(urls)
+        })
+    return out
+
 def collect(timeout=12):
     items, health = {}, []
     observed = now()
@@ -125,6 +171,24 @@ def collect(timeout=12):
             health.append({"surface":"reddit:r/"+subreddit,"ok":True,"observed":len(posts)})
         except Exception as ex:
             health.append({"surface":"reddit:r/"+subreddit,"ok":False,"error_type":type(ex).__name__})
+    for instance, tag in MASTODON_TAGS:
+        url = "https://"+instance+"/api/v1/timelines/tag/"+tag+"?limit=20"
+        try:
+            req = urllib.request.Request(url, headers={
+                "User-Agent":UA,"Accept":"application/json"
+            })
+            with urllib.request.urlopen(req, timeout=timeout) as r:
+                blob = r.read(1_000_001)
+            if len(blob)>1_000_000:
+                raise ValueError("feed exceeds 1MB cap")
+            posts = parse_mastodon_tag(blob,instance,tag,observed)
+            for p in posts:
+                items[p["post_hash"]] = p
+            health.append({"surface":"mastodon:tag/"+tag+"@"+instance,
+                           "ok":True,"observed":len(posts),"reliability":"LOW"})
+        except Exception as ex:
+            health.append({"surface":"mastodon:tag/"+tag+"@"+instance,
+                           "ok":False,"error_type":type(ex).__name__})
     return {
         "schema":"fee100k_crypto_native_crossover_v1",
         "generated_at":now(),
@@ -153,6 +217,10 @@ def self_test():
     assert "example-user" not in items[0]["text_excerpt"]
     assert object_url("https://x.com/bill") is None
     assert object_url("https://www.reddit.com/r/solana/") is None
+    test_masto='[{"url":"https://mastodon.social/@acct/1","account":{"id":"42"}, "content":"<p>#memecoin https://youtu.be/VidA123</p>","created_at":"2026-09-23T16:00:00Z"}]'.encode()
+    masto=parse_mastodon_tag(test_masto,"mastodon.social","memecoin","2026-09-23T16:01:00Z")
+    assert masto[0]["linked_object_urls"]==["youtube.com/video/VidA123"]
+    assert masto[0]["actor_hash"] and "acct" not in masto[0]["text_excerpt"]
     print("PASS: self-post exclusion, normalized exact outbound links, privacy redaction")
 
 def main():
