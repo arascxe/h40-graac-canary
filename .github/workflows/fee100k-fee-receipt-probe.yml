@@ -1,0 +1,57 @@
+name: FEE100K creator fee 2x2 read-only receipt probe
+on:
+  push:
+    paths:
+      - ".github/workflows/fee100k-fee-receipt-probe.yml"
+permissions:
+  contents: read
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 4
+    steps:
+      - name: Inspect four public creator addresses via official RPC
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          import json, urllib.request, time, datetime
+          RPC="https://api.mainnet-beta.solana.com"
+          rows=[
+            ("upper_BP4W","4b9eNunmdJCdbtYTPqMwU3wCVopEYaM8Dm5xBPK3G5Gb"),
+            ("upper_GTBx","BS3FxZoEnDjt76iR3WhEkQZhLqLARVCDFu4dc4Z9dE3B"),
+            ("lower_7WRX","BopmiQ2L2QVzoKQdEfbUZyy1GsLQZ7z3XJR16HCLddrX"),
+            ("lower_ACtf","BXAWg4JbaeyvAHpiyYQ3Xr3bUh6FsyDHwwSkB5dmyGF")
+          ]
+          def rpc(method,params):
+              req=urllib.request.Request(RPC,json.dumps({"jsonrpc":"2.0","id":1,"method":method,"params":params}).encode(),{"Content-Type":"application/json","User-Agent":"FEE100K-2x2-readonly/1.0"})
+              with urllib.request.urlopen(req,timeout=15) as resp: d=json.load(resp)
+              if "error" in d: raise RuntimeError(str(d["error"])[:200])
+              return d.get("result")
+          def dt(t): return datetime.datetime.fromtimestamp(t,datetime.timezone.utc).isoformat() if t else None
+          for label,creator in rows:
+              try:
+                  sigs=rpc("getSignaturesForAddress",[creator,{"limit":20,"commitment":"confirmed"}]) or []
+                  print(json.dumps({"label":label,"creator":creator,"sampled_recent_signatures":len(sigs),"newest":dt(sigs[0].get("blockTime")) if sigs else None,"oldest_sample":dt(sigs[-1].get("blockTime")) if sigs else None}))
+                  for idx in (0,1,5,19):
+                      if idx>=len(sigs): continue
+                      time.sleep(0.8)
+                      entry=sigs[idx]
+                      tx=rpc("getTransaction",[entry["signature"],{"encoding":"jsonParsed","maxSupportedTransactionVersion":0,"commitment":"confirmed"}])
+                      if not tx:
+                          print(json.dumps({"label":label,"index":idx,"status":"TX_UNAVAILABLE"})); continue
+                      msg=tx.get("transaction",{}).get("message",{})
+                      keys=msg.get("accountKeys") or []
+                      signer=any(isinstance(k,dict) and k.get("pubkey")==creator and k.get("signer") for k in keys)
+                      kidx=next((i for i,k in enumerate(keys) if (k.get("pubkey") if isinstance(k,dict) else k)==creator),None)
+                      meta=tx.get("meta") or {}
+                      pre=meta.get("preBalances") or []; post=meta.get("postBalances") or []
+                      delta=round((post[kidx]-pre[kidx])/1e9,9) if kidx is not None and kidx<len(pre) and kidx<len(post) else None
+                      logs=meta.get("logMessages") or []
+                      fee_logs=[s[:180] for s in logs if ("Instruction:" in s and ("Fee" in s or "Distribute" in s))][:5]
+                      instructions=msg.get("instructions") or []
+                      programs=list(dict.fromkeys(x.get("programId") for x in instructions))[:6]
+                      print(json.dumps({"label":label,"index":idx,"signature":entry["signature"],"time":dt(tx.get("blockTime")),"creator_signer":signer,"creator_sol_delta":delta,"programs":programs,"fee_instruction_logs":fee_logs},separators=(",",":")))
+              except Exception as ex:
+                  print(json.dumps({"label":label,"status":"ACCESS_FAIL","error_type":type(ex).__name__,"detail":str(ex)[:200]}))
+                  raise SystemExit(1)
+          PY
