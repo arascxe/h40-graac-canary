@@ -1,0 +1,44 @@
+name: FEE100K single canonical-pool trade fee probe
+on:
+  push:
+    paths:
+      - ".github/workflows/fee100k-pool-trade-probe.yml"
+permissions:
+  contents: read
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - name: Inspect five recent public pool transactions
+        run: |
+          python3 - <<'PY'
+          import urllib.request,json,time
+          rpc="https://api.mainnet-beta.solana.com"
+          pool="5jYdJBnSrtFTmE6C2nVHmPxKjgSdGTAWw4LodTHUbE74"
+          expected_mint="BP4Wic5LNKsqpmiREW6uNVEC16juvFCSd4WzVBatpump"
+          fee_vault_token="4D6fMFiU22Pk73foTL5dtyu1XjX9nFnRK4YCedxHpdiK"
+          def call(method,params):
+              req=urllib.request.Request(rpc,json.dumps({"jsonrpc":"2.0","id":1,"method":method,"params":params}).encode(),{"Content-Type":"application/json","User-Agent":"FEE100K-readonly-pool-check"})
+              with urllib.request.urlopen(req,timeout=15) as r: d=json.load(r)
+              if "error" in d: raise RuntimeError(str(d["error"])[:200])
+              return d.get("result")
+          acct=call("getAccountInfo",[pool,{"encoding":"base64"}])["value"]
+          print(json.dumps({"pool":pool,"owner_program":acct["owner"] if acct else None,"expected_mint_unverified":expected_mint}))
+          sigs=call("getSignaturesForAddress",[pool,{"limit":5}]) or []
+          for s in sigs:
+              time.sleep(0.8)
+              tx=call("getTransaction",[s["signature"],{"encoding":"jsonParsed","maxSupportedTransactionVersion":0}])
+              if not tx: continue
+              meta=tx.get("meta") or {}
+              ins=tx["transaction"]["message"].get("instructions") or []
+              inner=[]
+              for group in meta.get("innerInstructions") or []:
+                  for x in group.get("instructions") or []:
+                      p=x.get("parsed") or {}; info=p.get("info") or {}
+                      if p.get("type") in ("transferChecked","transfer"):
+                          if info.get("destination")==fee_vault_token:
+                              inner.append({"program":x.get("program"),"info":info})
+              logs=[x for x in meta.get("logMessages") or [] if "Instruction:" in x and any(w in x for w in ("Buy","Sell","Fee"))][:8]
+              print(json.dumps({"signature":s["signature"],"block_time":tx.get("blockTime"),"programs":list(dict.fromkeys(x.get("programId") for x in ins))[:8],"fee_vault_transfers":inner,"instruction_logs":logs},separators=(",",":")))
+          PY
