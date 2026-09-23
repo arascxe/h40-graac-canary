@@ -1,0 +1,29 @@
+name: FEE100K mint fee auditor acceptance
+on:
+  push:
+    paths:
+      - ".github/workflows/fee100k-test-pool-auditor.yml"
+permissions:
+  contents: read
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+      - name: Real transaction positive and wrong-mint negative
+        run: |
+          python3 -m py_compile fee_audit/pool_fee_flow_v1.py
+          python3 fee_audit/pool_fee_flow_v1.py --signature 2pZ8Yy4dAWatL8afGUVZu9BdHNxJhK6243diSYPMbhce6tAwsy1Y5VoVCMrcq6rTtLPJHrzpyXJdVjsrT8hzj29w --pool 5jYdJBnSrtFTmE6C2nVHmPxKjgSdGTAWw4LodTHUbE74 --mint BP4Wic5LNKsqpmiREW6uNVEC16juvFCSd4WzVBatpump --fee-vault-token 4D6fMFiU22Pk73foTL5dtyu1XjX9nFnRK4YCedxHpdiK | tee /tmp/yes.json
+          python3 fee_audit/pool_fee_flow_v1.py --signature 2pZ8Yy4dAWatL8afGUVZu9BdHNxJhK6243diSYPMbhce6tAwsy1Y5VoVCMrcq6rTtLPJHrzpyXJdVjsrT8hzj29w --pool 5jYdJBnSrtFTmE6C2nVHmPxKjgSdGTAWw4LodTHUbE74 --mint 7WRX5QGuRLhGCJszpQjYmw6ihb6z8KRdAEHQUhGJpump --fee-vault-token 4D6fMFiU22Pk73foTL5dtyu1XjX9nFnRK4YCedxHpdiK | tee /tmp/no.json
+          python3 - <<'PY'
+          import json
+          y=json.load(open('/tmp/yes.json')); n=json.load(open('/tmp/no.json'))
+          assert y['classification']=='VERIFIED_MINT_POOL_CREATOR_VAULT_FLOW'
+          assert y['fee_amount_lamports']==316399
+          assert y['claim_status']=='NOT_CHECKED' and y['buyer_independence']=='UNKNOWN'
+          assert n['classification']=='UNVERIFIED'
+          print('PASS: real mint-specific fee flow; wrong-mint rejected')
+          PY
