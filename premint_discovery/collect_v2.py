@@ -175,7 +175,8 @@ def upsert(rows, *, source, actor_id, post_id, created_at, text, links, buckets,
         return False
     ph = h(f"{source}:{post_id}")
     ts = now_iso()
-    actor_hash = h(actor_id) if actor_id else None
+    adapter = source.split(":",1)[0]
+    actor_hash = h(f"{adapter}:{actor_id}") if actor_id else None
     prev = rows.get(ph)
     if prev:
         prev["last_observed_at"] = ts
