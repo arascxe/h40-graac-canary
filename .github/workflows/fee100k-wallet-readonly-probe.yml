@@ -33,12 +33,18 @@ jobs:
               return datetime.datetime.fromtimestamp(ts,datetime.timezone.utc).isoformat() if ts else None
           try:
               signatures = rpc("getSignaturesForAddress",[address,{"limit":1000,"commitment":"confirmed"}]) or []
-              older = rpc("getSignaturesForAddress",[address,{"limit":1000,"before":signatures[-1]["signature"],"commitment":"confirmed"}]) if len(signatures)==1000 else []
-              signatures += older
+              pages=[signatures]
+              for page in range(4):
+                  if not pages[-1] or len(pages[-1])<1000: break
+                  older=rpc("getSignaturesForAddress",[address,{"limit":1000,"before":pages[-1][-1]["signature"],"commitment":"confirmed"}]) or []
+                  pages.append(older)
+                  signatures += older
+                  print(json.dumps({"page":page+2,"count":len(older),"newest":iso(older[0].get("blockTime")) if older else None,"oldest":iso(older[-1].get("blockTime")) if older else None}))
+                  time.sleep(0.8)
               print(json.dumps({"source":"official_solana_public_rpc","address":address,"recent_signature_count":len(signatures),"first_block_time":iso(signatures[0].get("blockTime")) if signatures else None,"last_block_time":iso(signatures[-1].get("blockTime")) if signatures else None}))
               from collections import Counter
-              print(json.dumps({"months":dict(sorted(Counter((iso(x.get("blockTime")) or "unknown")[:7] for x in signatures).items())),"sample_is_partial":len(older)==1000}))
-              for entry in [signatures[i] for i in [0,19,99,249,499,999,1000,1250,1499,1750,1999] if i < len(signatures)]:
+              print(json.dumps({"months":dict(sorted(Counter((iso(x.get("blockTime")) or "unknown")[:7] for x in signatures).items())),"sample_is_partial":len(pages[-1])==1000}))
+              for entry in [signatures[i] for i in [0,19,249,499,999,1499,1750,1999,2250,2499,2750,2999,3250,3499,3750,3999,4250,4499,4750,4999] if i < len(signatures)]:
                   time.sleep(1)
                   tx = rpc("getTransaction",[entry["signature"],{"encoding":"jsonParsed","maxSupportedTransactionVersion":0,"commitment":"confirmed"}])
                   if not tx:
@@ -53,6 +59,10 @@ jobs:
                   pre=meta.get("preBalances") or []; post=meta.get("postBalances") or []
                   delta=(post[idx]-pre[idx])/1e9 if idx is not None and idx<len(pre) and idx<len(post) else None
                   print(json.dumps({"signature":entry["signature"],"block_time":iso(tx.get("blockTime")),"wallet_signer":bool(signer),"wallet_sol_delta":delta,"programs":list(dict.fromkeys(x.get("programId") for x in ins))[:10]},separators=(",",":")))
+              known=rpc("getTransaction",["3p9pEfkV7QZ6uj1YYVAkczGPNLTCxp1bvmDwpdwVTjvDCkoXLup9kuqkLbNuepcEFJy77iNM1vy6Cp3JZzDJDQ5p",{"encoding":"jsonParsed","maxSupportedTransactionVersion":0,"commitment":"confirmed"}])
+              if known:
+                  ins=known.get("transaction",{}).get("message",{}).get("instructions",[])
+                  print(json.dumps({"known_signed_transfer":"2025-03-30","instructions":[x.get("parsed") for x in ins if x.get("parsed")][:8]}))
           except Exception as exc:
               print(json.dumps({"status":"ACCESS_FAIL","type":type(exc).__name__,"detail":str(exc)[:300]}))
               raise SystemExit(1)
