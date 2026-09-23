@@ -1,0 +1,53 @@
+name: FEE100K wallet read-only probe
+
+on:
+  push:
+    branches: [fee100k-wallet-probe-20260923]
+    paths:
+      - ".github/workflows/fee100k-wallet-readonly-probe.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 4
+    steps:
+      - name: Read bounded public Solana account history
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          import json, urllib.request, urllib.error, datetime, time
+          address = "2392b8HRWiw8beiaH8ynLLK5VwjFUMbT8VpChmAUYjUQ"
+          endpoint = "https://api.mainnet-beta.solana.com"
+          def rpc(method, params):
+              payload = json.dumps({"jsonrpc":"2.0","id":1,"method":method,"params":params}).encode()
+              req = urllib.request.Request(endpoint, payload, {"Content-Type":"application/json","User-Agent":"FEE100K-readonly-audit/1.0"})
+              with urllib.request.urlopen(req, timeout=12) as resp:
+                  data = json.load(resp)
+              if "error" in data:
+                  raise RuntimeError(str(data["error"])[:300])
+              return data.get("result")
+          def iso(ts):
+              return datetime.datetime.fromtimestamp(ts,datetime.timezone.utc).isoformat() if ts else None
+          try:
+              signatures = rpc("getSignaturesForAddress",[address,{"limit":20,"commitment":"confirmed"}]) or []
+              print(json.dumps({"source":"official_solana_public_rpc","address":address,"recent_signature_count":len(signatures),"first_block_time":iso(signatures[0].get("blockTime")) if signatures else None,"last_block_time":iso(signatures[-1].get("blockTime")) if signatures else None}))
+              for entry in signatures:
+                  print(json.dumps({"signature":entry.get("signature"),"slot":entry.get("slot"),"block_time":iso(entry.get("blockTime")),"err":entry.get("err")},separators=(",",":")))
+              for entry in signatures[:3]:
+                  time.sleep(1)
+                  tx = rpc("getTransaction",[entry["signature"],{"encoding":"jsonParsed","maxSupportedTransactionVersion":0,"commitment":"confirmed"}])
+                  if not tx:
+                      print(json.dumps({"signature":entry["signature"],"transaction":"unavailable"}))
+                      continue
+                  msg = tx.get("transaction",{}).get("message",{})
+                  ins = msg.get("instructions",[])
+                  meta = tx.get("meta") or {}
+                  keys = msg.get("accountKeys",[])
+                  print(json.dumps({"signature":entry["signature"],"block_time":iso(tx.get("blockTime")),"fee_lamports":meta.get("fee"),"programs":[x.get("programId") for x in ins][:15],"first_account_keys":[x.get("pubkey") if isinstance(x,dict) else x for x in keys[:5]],"pre_balances":(meta.get("preBalances") or [])[:5],"post_balances":(meta.get("postBalances") or [])[:5]},separators=(",",":")))
+          except Exception as exc:
+              print(json.dumps({"status":"ACCESS_FAIL","type":type(exc).__name__,"detail":str(exc)[:300]}))
+              raise SystemExit(1)
+          PY
