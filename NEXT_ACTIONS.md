@@ -20,3 +20,10 @@ Priority 2: Isolate database pressure without repeated heavy probes. Capture a n
 Priority 3: Once coverage recovers, evaluate the same 20 primary IDs against their ten matched controls and the separate 20 exploration IDs. At the first apparent exact-object match, manually verify original source URL, independent crypto actor/community, post publication and observation times before mint, and semantic vacancy. Absence under current gaps is UNKNOWN.
 
 Security footnote: `fee100k_private` has disabled RLS warnings, but anon/auth schema USAGE is false. Review Data API exposure and table privileges before any RLS migration; preserve bridge compatibility. No automatic security migration based solely on the advisory.
+
+## 2026-09-23 19:45 UTC — incident-aware next step
+
+1. On the next session, inspect independent PostgreSQL logs first. If multiple 57014/connection timeouts continue, make at most one bounded SQL probe and stop on timeout; do not repeat full scans or stack another workload. Establish whether the incident has cleared before code or cron intervention.
+2. When stable, compare individual job duration and wait events with schedule collisions. Prioritize a single small shadow rewrite of snapshot pruning or 12-hour token refresh, with unchanged evidence retention and explicit rollback. Test on real bounded data, then measure job latency and source freshness before any production rollout.
+3. Independently verify a fresh scheduled crypto workflow snapshot and bridge response; a past push success does not close the data gap. Resume frozen 20-vs-control evaluation only in periods with timestamped source coverage. Keep separate exploration cohort and no inferred fee income.
+4. The hourly automation now uses log-first fail-fast during database incidents and checks overlap with the four-hour development task. This is a task-prompt change, not a repair to production services.
