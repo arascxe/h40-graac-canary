@@ -33,10 +33,12 @@ jobs:
               return datetime.datetime.fromtimestamp(ts,datetime.timezone.utc).isoformat() if ts else None
           try:
               signatures = rpc("getSignaturesForAddress",[address,{"limit":1000,"commitment":"confirmed"}]) or []
+              older = rpc("getSignaturesForAddress",[address,{"limit":1000,"before":signatures[-1]["signature"],"commitment":"confirmed"}]) if len(signatures)==1000 else []
+              signatures += older
               print(json.dumps({"source":"official_solana_public_rpc","address":address,"recent_signature_count":len(signatures),"first_block_time":iso(signatures[0].get("blockTime")) if signatures else None,"last_block_time":iso(signatures[-1].get("blockTime")) if signatures else None}))
               from collections import Counter
-              print(json.dumps({"months":dict(sorted(Counter((iso(x.get("blockTime")) or "unknown")[:7] for x in signatures).items())),"sample_is_partial":len(signatures)==1000}))
-              for entry in [signatures[i] for i in [0,19,99,249,499,999] if i < len(signatures)]:
+              print(json.dumps({"months":dict(sorted(Counter((iso(x.get("blockTime")) or "unknown")[:7] for x in signatures).items())),"sample_is_partial":len(older)==1000}))
+              for entry in [signatures[i] for i in [0,19,99,249,499,999,1000,1250,1499,1750,1999] if i < len(signatures)]:
                   time.sleep(1)
                   tx = rpc("getTransaction",[entry["signature"],{"encoding":"jsonParsed","maxSupportedTransactionVersion":0,"commitment":"confirmed"}])
                   if not tx:
