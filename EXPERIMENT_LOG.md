@@ -103,3 +103,7 @@ No schedule, threshold, freeze, source implementation, output contract, credenti
 **Runtime result.** The workflow-file change intentionally caused one final push run [35935251897](https://github.com/arascxe/h40-graac-canary/actions/runs/35935251897), which entered `in_progress`; concurrency cancelled predecessor scheduled run [35931272889](https://github.com/arascxe/h40-graac-canary/actions/runs/35931272889). This is a technical-start PASS only. Completion and the first published cycle still require observation. Rollback: revert commit 89f29d5.
 
 **Economic result.** None. Primary 20 and separate exploratory 20 remain frozen and distinct; exact matches remain zero under incomplete coverage; no verified user-wallet creator-fee receipt or pilot candidate.
+
+### 23:48 UTC runtime verification
+
+Run 35935251897 published a schema-valid cycle-1 snapshot at 23:48:29 UTC (66 items, 57 actor hashes). First-cycle publication PASS closes the immediate technical smoke test. Direct TikTok Creative Center remained unavailable (40101), one Reddit feed returned 429, and this did not repair the separate stale crypto exact-object lane. No economic conclusion or candidate promotion.
