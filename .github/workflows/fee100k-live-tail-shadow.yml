@@ -1,0 +1,60 @@
+name: FEE100K live-tail shadow source check
+on:
+  push:
+    paths:
+      - ".github/workflows/fee100k-live-tail-shadow.yml"
+permissions:
+  contents: read
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - name: Install small public stream client
+        run: python3 -m pip install --quiet --disable-pip-version-check 'websockets>=13,<16'
+      - name: Measure source freshness without storing posts
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          import asyncio, json, re, time
+          from datetime import datetime, timezone
+          from urllib.parse import urlencode, urlparse
+          import websockets
+          HOST="jetstream1.us-east.bsky.network"
+          URI="wss://"+HOST+"/subscribe?"+urlencode({"wantedCollections":"app.bsky.feed.post"})
+          TERMS=re.compile(r"\b(memecoin|meme coin|pumpfun|pump\.fun|solana|crypto|token launch|launchpad)\b",re.I)
+          def exact_url(url):
+              try:
+                  u=urlparse(url); p=u.path.lower(); h=(u.hostname or "").removeprefix("www.")
+                  return (h in ("x.com","twitter.com") and "/status/" in p) or (h in ("youtube.com","youtu.be") and ("/shorts/" in p or "/watch" in p)) or (h=="tiktok.com" and "/video/" in p) or (h=="reddit.com" and "/comments/" in p)
+              except (TypeError,ValueError): return False
+          async def main():
+              seen=0; crypto=0; linked=0; lags=[]; errors=[]; start=time.monotonic()
+              try:
+                  async with websockets.connect(URI,open_timeout=10,close_timeout=2,max_size=1000000) as ws:
+                      while time.monotonic()-start<20 and seen<15000:
+                          try: evt=json.loads(await asyncio.wait_for(ws.recv(),timeout=3))
+                          except asyncio.TimeoutError: continue
+                          except (ValueError,TypeError): continue
+                          ts=evt.get("time_us")
+                          if isinstance(ts,int): lags.append(round(time.time()-ts/1000000,2))
+                          if evt.get("kind")!="commit" or evt.get("commit",{}).get("collection")!="app.bsky.feed.post": continue
+                          seen+=1
+                          rec=evt.get("commit",{}).get("record") or {}
+                          body=str(rec.get("text") or "")
+                          if not TERMS.search(body): continue
+                          crypto+=1
+                          urls=re.findall(r"https?://[^\s<>\"']+",body,re.I)
+                          for facet in rec.get("facets") or []:
+                              for feature in facet.get("features") or []:
+                                  if isinstance(feature,dict): urls.append(feature.get("uri"))
+                          ext=(rec.get("embed") or {}).get("external") or {}
+                          if isinstance(ext,dict): urls.append(ext.get("uri"))
+                          if any(exact_url(u) for u in urls): linked+=1
+              except Exception as exc: errors.append(type(exc).__name__)
+              ordered=sorted(lags)
+              out={"surface":"official_public_jetstream_v1_live_tail","start_utc":datetime.now(timezone.utc).isoformat(),"window_seconds":round(time.monotonic()-start,1),"post_messages":seen,"crypto_keyword_posts":crypto,"crypto_posts_with_external_object_url":linked,"lag_p50_s":ordered[len(ordered)//2] if ordered else None,"lag_max_s":ordered[-1] if ordered else None,"errors":errors,"coverage":"SHADOW_20S_ONLY_NOT_FULL_COVERAGE"}
+              print(json.dumps(out))
+              if errors or seen==0: raise SystemExit(1)
+          asyncio.run(main())
+          PY
