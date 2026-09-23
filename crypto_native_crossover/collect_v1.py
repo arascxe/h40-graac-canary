@@ -202,8 +202,8 @@ def parse_bluesky_search(raw, query, observation_time):
             if len(toks)>=24:
                 break
         out.append({
-          "post_hash":hid("bluesky_search:"+uri),
-          "actor_hash":hid("bluesky_search:"+did),
+          "post_hash":hid("bluesky_jetstream:"+uri),
+          "actor_hash":hid("bluesky_jetstream:"+did),
           "source_surface":"bluesky:search/"+query,
           "source_reliability":"PUBLIC_CRYPTO_KEYWORD_SEARCH_SPAM_PRONE",
           "published_at":published,
@@ -276,8 +276,8 @@ async def collect_public_bluesky_jetstream(observed, seconds=18):
                         if len(tokens)>=24: break
                     uri="at://"+did+"/app.bsky.feed.post/"+rkey
                     p={
-                      "post_hash":hid("bluesky_search:"+uri),
-                      "actor_hash":hid("bluesky_search:"+did),
+                      "post_hash":hid("bluesky_jetstream:"+uri),
+                      "actor_hash":hid("bluesky_jetstream:"+did),
                       "source_surface":"bluesky:jetstream_crypto",
                       "source_reliability":"KEYWORD_ONLY_SPAM_PRONE_NOT_BUYER_PROOF",
                       "published_at":published,
