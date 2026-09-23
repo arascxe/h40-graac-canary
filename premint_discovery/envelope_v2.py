@@ -32,6 +32,7 @@ STOP = {
 DERIVATIVE_ORDER = ["remix","template","parody","derivative","reaction","meme","viral"]
 
 _PHASH_CACHE = {}
+_DCT_COS = [[math.cos((2*x+1)*u*math.pi/64.0) for x in range(32)] for u in range(8)]
 
 def sha24(value):
     return hashlib.sha256(str(value or "").encode("utf-8","ignore")).hexdigest()[:24]
@@ -195,10 +196,10 @@ def _phash_image(img):
         for v in range(8):
             s = 0.0
             for x in range(32):
-                cx = math.cos((2*x+1)*u*math.pi/64.0)
+                cx = _DCT_COS[u][x]
                 row = x*32
                 for y in range(32):
-                    s += px[row+y] * cx * math.cos((2*y+1)*v*math.pi/64.0)
+                    s += px[row+y] * cx * _DCT_COS[v][y]
             coeffs.append(s)
     med = statistics.median(coeffs[1:])
     return "".join("1" if c > med else "0" for c in coeffs)
@@ -206,6 +207,7 @@ def _phash_image(img):
 def image_phash_views(url):
     if not url or Image is None:
         return {"full":None,"center":None,"center60":None,"top87":None,"square":None}
+    url = html_lib.unescape(str(url))
     if url in _PHASH_CACHE:
         return _PHASH_CACHE[url]
     out = {"full":None,"center":None,"center60":None,"top87":None,"square":None}
