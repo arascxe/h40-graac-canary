@@ -349,7 +349,25 @@ def collect_reddit_rss(rows, health, cycle=1):
                 link_el = entry.find("atom:link", ns)
                 permalink = link_el.get("href", "") if link_el is not None else ""
                 links = allowed_links_from_values([permalink, content] + HREF_RE.findall(content))
-                text = f"{title} {html_to_text(content)}"
+                content_text = html_to_text(content)
+                # Remove RSS attribution/navigation boilerplate from identity features.
+                content_text = re.sub(
+                    r"\s*submitted by /u/\S+ to r/\S+\s*(?:\[link\])?\s*(?:\[comments\])?\s*$",
+                    "",
+                    content_text,
+                    flags=re.I,
+                ).strip()
+                content_text = re.sub(r"\s*\[link\]\s*\[comments\]\s*$", "", content_text, flags=re.I).strip()
+                # For media posts, the title is usually the cleanest object identity.
+                # For text posts retain a bounded body fragment after stripping attribution.
+                media_url = pick_media_url([content])
+                if media_url:
+                    text = title.strip()
+                else:
+                    body = content_text
+                    if body.lower().startswith(title.strip().lower()):
+                        body = body[len(title.strip()):].strip()
+                    text = (title.strip() + (" " + body[:320] if body else "")).strip()
                 buckets = buckets_for(text, links)
                 total += 1
                 if upsert(
@@ -361,7 +379,8 @@ def collect_reddit_rss(rows, health, cycle=1):
                     text=text,
                     links=links,
                     buckets=buckets,
-                    media_url=pick_media_url([content]),
+                    media_url=media_url,
+                    source_metadata={"subreddit": subreddit, "feed": feed},
                 ):
                     created += 1
         except Exception as e:
