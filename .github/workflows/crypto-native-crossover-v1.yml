@@ -19,15 +19,34 @@ concurrency:
 jobs:
   collect:
     runs-on: ubuntu-latest
-    timeout-minutes: 5
+    timeout-minutes: 8
     steps:
       - uses: actions/checkout@v4
       - name: Install bounded public-stream client
         run: python3 -m pip install --quiet --disable-pip-version-check 'websockets>=13,<16'
       - name: Offline privacy and matching self-test
         run: python3 crypto_native_crossover/collect_v1.py --self-test
-      - name: Collect public crypto-community object citations
-        run: python3 crypto_native_crossover/collect_v1.py --out /tmp/crossover.json
+      - name: Load prior public Jetstream cursor (no backdated observations)
+        shell: bash
+        run: |
+          if curl --fail --location --silent --show-error --max-time 12 --retry 1 \
+             "https://raw.githubusercontent.com/${GITHUB_REPOSITORY}/fee100k-crypto-crossover-data-v1/latest.json" \
+             -o /tmp/crossover-prior.json; then
+            python3 -m json.tool /tmp/crossover-prior.json >/dev/null || rm -f /tmp/crossover-prior.json
+          fi
+      - name: Collect approved community feeds and resumable public Bluesky events
+        env:
+          REDDIT_ACCESS_APPROVED: ${{ vars.REDDIT_ACCESS_APPROVED }}
+          REDDIT_CLIENT_ID: ${{ secrets.REDDIT_CLIENT_ID }}
+          REDDIT_CLIENT_SECRET: ${{ secrets.REDDIT_CLIENT_SECRET }}
+          REDDIT_USER_AGENT: ${{ secrets.REDDIT_USER_AGENT }}
+        shell: bash
+        run: |
+          if [ -s /tmp/crossover-prior.json ]; then
+            python3 crypto_native_crossover/collect_v1.py --out /tmp/crossover.json --prior /tmp/crossover-prior.json
+          else
+            python3 crypto_native_crossover/collect_v1.py --out /tmp/crossover.json
+          fi
       - name: Enforce privacy and payload bounds
         run: |
           python3 - <<'PY'
@@ -39,6 +58,7 @@ jobs:
           assert not p['privacy']['handles_stored']
           assert not p['privacy']['raw_ids_stored']
           assert len(p['items'])<=100
+          assert 'jetstream_cursor_us' in p
           assert all(len(i.get('linked_object_urls', [])) <=8 for i in p['items'])
           print(json.dumps({'count':len(p['items']),'health':p['source_health']}))
           PY
