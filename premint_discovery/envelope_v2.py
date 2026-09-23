@@ -124,13 +124,30 @@ def choose_canonical_url(source, links):
             or normalized[0]
         )
     if adapter in {"bluesky_jetstream","mastodon_public"}:
-        return (
-            first(lambda u: any(k in u for k in ("/status/","/statuses/","/post/","/posts/")))
-            or normalized[0]
-        )
+        # Prefer a concrete external object. Social profile/root URLs are identity
+        # containers, not replicating objects, and must never form EXACT_URL edges.
+        concrete = first(lambda u: any(k in u for k in (
+            "/status/","/statuses/","/post/","/posts/","/video/",
+            "/comments/","/gallery/","/reel/","/p/"
+        )))
+        if concrete:
+            return concrete
+        for u in normalized:
+            if re.match(r"^(?:x\.com|twitter\.com)/[^/?#]+/?$", u, re.I):
+                continue
+            if re.match(r"^reddit\.com/(?:r|user)/[^/?#]+/?$", u, re.I):
+                continue
+            if re.match(r"^youtube\.com/(?:@|channel/|c/|user/)", u, re.I):
+                continue
+            return u
+        return None
     return (
         first(lambda u: any(k in u for k in ("/status/","/video/","/comments/","/gallery/","/reel/","/p/")))
-        or normalized[0]
+        or first(lambda u: not (
+            re.match(r"^(?:x\.com|twitter\.com)/[^/?#]+/?$", u, re.I)
+            or re.match(r"^reddit\.com/(?:r|user)/[^/?#]+/?$", u, re.I)
+            or re.match(r"^youtube\.com/(?:@|channel/|c/|user/)", u, re.I)
+        ))
     )
 
 def text_tokens(text, limit=24):
