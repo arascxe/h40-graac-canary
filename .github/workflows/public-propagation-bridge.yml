@@ -52,7 +52,22 @@ jobs:
             git add latest.json README.md
             git commit -q -m "Update public propagation snapshot"
             git remote add origin "https://x-access-token:${GITHUB_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
-            git push --force -q origin HEAD:propagation-data-v2
+            # GitHub can intermittently reject a branch update with HTTP 500.
+            # Retry *only* the identical validated snapshot; never label missing
+            # observations as collected and never silently skip all failures.
+            pushed=0
+            for attempt in 1 2 3 4; do
+              if git -c http.lowSpeedLimit=1000 -c http.lowSpeedTime=30 push --force -q origin HEAD:propagation-data-v2; then
+                pushed=1
+                break
+              fi
+              echo "::warning::propagation-data-v2 publish attempt ${attempt}/4 failed"
+              if [ "$attempt" -lt 4 ]; then sleep $((attempt * attempt * 3)); fi
+            done
+            if [ "$pushed" -ne 1 ]; then
+              echo "::error::propagation-data-v2 publish failed after 4 attempts; coverage gap must be recorded."
+              exit 1
+            fi
             cd "$GITHUB_WORKSPACE"
           }
 
