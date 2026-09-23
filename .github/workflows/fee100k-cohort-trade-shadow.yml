@@ -13,7 +13,7 @@ permissions:
 jobs:
   inspect:
     runs-on: ubuntu-latest
-    timeout-minutes: 6
+    timeout-minutes: 9
     steps:
       - name: Restore frozen baseline
         env:
@@ -35,6 +35,11 @@ jobs:
           rows = baseline['launches']
           # Fixed by mint before reading any subsequent trade or outcome.
           chosen = sorted(rows,key=lambda r:r['mint'])[:12]
+          latest_birth = max(r['created_timestamp_ms'] for r in chosen) / 1000
+          wait = max(0, latest_birth + 302 - time.time())
+          if wait > 300:
+              raise SystemExit('unexpected future creation timestamp')
+          time.sleep(wait)
           results = []
           for row in chosen:
               mint = row['mint']
@@ -42,7 +47,11 @@ jobs:
               p = subprocess.run(['curl','-sS','--max-time','18','-A','FEE100K-readonly-cohort/1.0',
                                   '-w','\n__STATUS__%{http_code}',url],capture_output=True,timeout=23)
               body, sep, status = p.stdout.rpartition(b'\n__STATUS__')
-              result = {'mint':mint,'created_timestamp_ms':row['created_timestamp_ms'],'source_http':status.decode(errors='replace')[:10] if sep else 'UNKNOWN'}
+              observed_at = dt.datetime.now(dt.timezone.utc).isoformat()
+              result = {'mint':mint,'name':row['name'],'creator':row['creator'],
+                        'created_timestamp_ms':row['created_timestamp_ms'],
+                        'observed_at':observed_at,'first_5m_window_matured':time.time()>=row['created_timestamp_ms']/1000+300,
+                        'source_http':status.decode(errors='replace')[:10] if sep else 'UNKNOWN'}
               if sep and status.strip() == b'200':
                   try:
                       data = json.loads(body)
