@@ -20,7 +20,7 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           mkdir -p runtime
-          gh run download 35851840827 -n mdrtf-state -D runtime
+          gh run download 35851840827 -R arascxe/h40-graac-canary -n mdrtf-state -D runtime
 
       - name: Bounded same-window launch audit
         run: |
