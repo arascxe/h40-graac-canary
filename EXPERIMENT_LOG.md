@@ -17,3 +17,7 @@ Cohort quality audit: direct inspection of frozen rows found generic news, sport
 Decision: FIX coverage and database health before a launchability claim; preserve all first-freeze records. Fail condition for the next bounded check: if freshness and bridge health remain insufficient, label crossover outcome `DATA_GAP`, not `NO_CROSSOVER`.
 
 No code, schedule, schema, threshold, funds, alert routing or token launch changed in this checkpoint.
+
+### Read-only plan probe, ~19:30 UTC
+
+`EXPLAIN (FORMAT JSON)` for the snapshot pruning DELETE (without executing it) shows a window over an estimated 21,973 snapshot rows, incremental sort, then a full sequential scan and hash join of the snapshot table for deletion. A read-only count found 4,228 object keys and **zero** keys above the 18-row cap at that moment; this full pruning operation was therefore doing no useful deletion in that sample. The count itself took about 50 seconds under current load. A subsequent function-definition query failed with a connection timeout. This supports load triage but does not establish sole causality or justify dropping the immutable retention rule. No changes made.
