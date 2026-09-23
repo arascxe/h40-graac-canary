@@ -10,3 +10,13 @@
 6. At 24h and 7d, record mature outcomes and matching source coverage per object. Treat undocumented tokenization as UNKNOWN. Only prepare a rights-safe pilot when full original Demand-Proof, semantic vacancy, independent pre-mint crossover, distribution and exact fee-owner route all pass.
 
 Current decision: FIX. No `P($100K)` estimate, pilot-ready finding or verified revenue. The next user approval is needed only for a specific live mint, transaction, funds or paid service after a reviewable pilot package exists.
+
+## 2026-09-23 19:40 UTC — narrowed immediate action
+
+Priority 1: Restore trustworthy observation freshness, not candidate volume. The crypto workflow declares `7,22,37,52 * * * *`, but no scheduled run has appeared since the 17:03 push run. Inspect workflow scheduling/queue independently of database load; test with one bounded, non-financial, shadow/dispatch run only after confirming free capacity and no overlapping long job. Validate a newly timestamped snapshot and bridge 200 before treating crossover counts as measured negatives. Do not backfill missed Jetstream observations as if seen live.
+
+Priority 2: Isolate database pressure without repeated heavy probes. Capture a narrow per-job failure summary and single-function plans when connections stabilize. Compare schedule collision times with active long queries. Prepare a bounded incremental maintenance proposal and rollback; first test a small actual slice in read-only/shadow, then verify cron success and freshness before any production job or schema change. Repeated full-scan counts timed out/consumed ~50s and should not be retried unchanged.
+
+Priority 3: Once coverage recovers, evaluate the same 20 primary IDs against their ten matched controls and the separate 20 exploration IDs. At the first apparent exact-object match, manually verify original source URL, independent crypto actor/community, post publication and observation times before mint, and semantic vacancy. Absence under current gaps is UNKNOWN.
+
+Security footnote: `fee100k_private` has disabled RLS warnings, but anon/auth schema USAGE is false. Review Data API exposure and table privileges before any RLS migration; preserve bridge compatibility. No automatic security migration based solely on the advisory.
