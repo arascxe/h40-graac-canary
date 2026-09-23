@@ -34,6 +34,16 @@ def now():
 def hid(s):
     return hashlib.sha256(s.encode("utf-8", "ignore")).hexdigest()[:24]
 
+def timely_public_post(published, observed, max_lag_minutes=120):
+    """Fail closed on unknown or old publish times: late RSS is not early attention."""
+    try:
+        post = datetime.fromisoformat(str(published).replace("Z", "+00:00")).astimezone(timezone.utc)
+        obs = datetime.fromisoformat(str(observed).replace("Z", "+00:00")).astimezone(timezone.utc)
+        age = (obs-post).total_seconds()/60
+        return -5 <= age <= max_lag_minutes
+    except (ValueError, TypeError):
+        return False
+
 def object_url(raw):
     """Return only an exact external post/video object. Profiles, hashtags, roots excluded."""
     from urllib.parse import urlparse, parse_qs
@@ -72,7 +82,7 @@ def parse_atom(raw, subreddit, reliability, observation_time):
         title = html.unescape(e.findtext("a:title", default="", namespaces=ATOM))
         published = e.findtext("a:published", default=None, namespaces=ATOM) or e.findtext("a:updated", default=None, namespaces=ATOM)
         author = e.findtext("a:author/a:name", default="", namespaces=ATOM)
-        if not (postid or permalink):
+        if not (postid or permalink) or not timely_public_post(published, observation_time):
             continue
         self_object = object_url(permalink)
         # Incoming links to OTHER precise objects; the crypto post's own permalink is NOT a crossover.
@@ -121,7 +131,7 @@ def parse_mastodon_tag(raw, instance, tag, observation_time):
         if not isinstance(status, dict) or status.get("reblog") is not None:
             continue
         permalink = str(status.get("url") or "")
-        if not permalink:
+        if not permalink or not timely_public_post(status.get("created_at"), observation_time):
             continue
         user = str((status.get("account") or {}).get("id") or "")
         content = html.unescape(str(status.get("content") or ""))
@@ -150,6 +160,60 @@ def parse_mastodon_tag(raw, instance, tag, observation_time):
             "has_exact_outbound_object":bool(urls)
         })
     return out
+
+def parse_bluesky_search(raw, query, observation_time):
+    """Public appview search; independent crypto discussion remains UNVERIFIED."""
+    data = json.loads(raw.decode("utf-8"))
+    posts = data.get("posts") if isinstance(data,dict) else None
+    if not isinstance(posts,list):
+        raise ValueError("unexpected Bluesky search API response")
+    out=[]
+    for item in posts[:35]:
+        rec = item.get("record") or {}
+        published = rec.get("createdAt") or item.get("indexedAt")
+        if not timely_public_post(published,observation_time):
+            continue
+        uri=str(item.get("uri") or "")
+        did=str((item.get("author") or {}).get("did") or "")
+        if not uri or not did:
+            continue
+        message = str(rec.get("text") or "")
+        raw_links = URLS.findall(message)
+        for source in (rec.get("facets") or []):
+            for ft in (source.get("features") or []):
+                if isinstance(ft,dict) and ft.get("uri"):
+                    raw_links.append(ft["uri"])
+        for emb in (rec.get("embed"),item.get("embed")):
+            if not isinstance(emb,dict):
+                continue
+            ext = emb.get("external") or {}
+            if isinstance(ext,dict) and ext.get("uri"):
+                raw_links.append(ext["uri"])
+        urls = {object_url(x) for x in raw_links if isinstance(x,str)}
+        urls.discard(None)
+        clean = " ".join(URLS.sub(" ",message).split())
+        clean = EMAIL.sub("[redacted-email]",MENTION.sub("[mention]",clean))
+        toks=[]
+        for t in WORD.findall(clean.lower()):
+            if t not in STOP and not t.isdigit() and t not in toks and len(t)<36:
+                toks.append(t)
+            if len(toks)>=24:
+                break
+        out.append({
+          "post_hash":hid("bluesky_search:"+uri),
+          "actor_hash":hid("bluesky_search:"+did),
+          "source_surface":"bluesky:search/"+query,
+          "source_reliability":"PUBLIC_CRYPTO_KEYWORD_SEARCH_SPAM_PRONE",
+          "published_at":published,
+          "first_observed_at":observation_time,
+          "linked_object_urls":sorted(urls)[:8],
+          "semantic_tokens":toks,
+          "text_excerpt":clean[:180],
+          "has_exact_outbound_object":bool(urls)
+        })
+    return out
+
+BLUESKY_SEARCH_TERMS=("memecoin","pumpfun")
 
 def collect(timeout=12):
     items, health = {}, []
@@ -189,6 +253,26 @@ def collect(timeout=12):
         except Exception as ex:
             health.append({"surface":"mastodon:tag/"+tag+"@"+instance,
                            "ok":False,"error_type":type(ex).__name__})
+    for term in BLUESKY_SEARCH_TERMS:
+        try:
+            from urllib.parse import urlencode
+            qs=urlencode({"q":term,"sort":"latest","limit":"35"})
+            req=urllib.request.Request(
+              "https://public.api.bsky.app/xrpc/app.bsky.feed.searchPosts?"+qs,
+              headers={"User-Agent":UA,"Accept":"application/json"}
+            )
+            with urllib.request.urlopen(req, timeout=timeout) as resp:
+                blob=resp.read(1_000_001)
+            if len(blob)>1_000_000:
+                raise ValueError("Bluesky search feed exceeds 1MB cap")
+            posts=parse_bluesky_search(blob,term,observed)
+            for post in posts:
+                items[post["post_hash"]]=post
+            health.append({"surface":"bluesky:search/"+term,"ok":True,
+                           "fresh":len(posts),"reliability":"LOW"})
+        except Exception as ex:
+            health.append({"surface":"bluesky:search/"+term,"ok":False,
+                           "error_type":type(ex).__name__})
     return {
         "schema":"fee100k_crypto_native_crossover_v1",
         "generated_at":now(),
@@ -221,7 +305,14 @@ def self_test():
     masto=parse_mastodon_tag(test_masto,"mastodon.social","memecoin","2026-09-23T16:01:00Z")
     assert masto[0]["linked_object_urls"]==["youtube.com/video/VidA123"]
     assert masto[0]["actor_hash"] and "acct" not in masto[0]["text_excerpt"]
-    print("PASS: self-post exclusion, normalized exact outbound links, privacy redaction")
+    bsky_fixture=json.dumps({"posts":[{"uri":"at://did:plc:alice/app.bsky.feed.post/q",
+      "author":{"did":"did:plc:alice"},
+      "record":{"createdAt":"2026-09-23T16:01:00Z",
+                "text":"memecoin original https://x.com/test/status/123456789"}}]}).encode()
+    b=parse_bluesky_search(bsky_fixture,"memecoin","2026-09-23T16:02:00Z")
+    assert len(b)==1 and b[0]["linked_object_urls"]==["x.com/status/123456789"]
+    assert not timely_public_post("2026-09-20T16:01:00Z","2026-09-23T16:02:00Z")
+    print("PASS: self-post exclusion, exact links, fresh-only timestamps, privacy redaction, Bluesky parsing")
 
 def main():
     p = argparse.ArgumentParser()
