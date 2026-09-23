@@ -54,7 +54,7 @@ def audit(tx, creator, signature):
         return out
     # The creator's temporary wrapped-SOL account is closed to the creator.
     closed_to_creator = {
-        i.get("parsed", {}).get("info", {}).get("account")
+        i["parsed"].get("info", {}).get("account")
         for i in outer if isinstance(i.get("parsed"), dict)
         and i["parsed"].get("type") == "closeAccount"
         and i["parsed"].get("info", {}).get("destination") == creator
