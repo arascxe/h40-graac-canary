@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Universal discovery-envelope helpers for FEE100K DISCOVERY_ADAPTER_BUS_V2."""
 import hashlib
+import html as html_lib
 import io
 import math
 import re
@@ -39,7 +40,7 @@ def normalize_object_url(url):
     if not url:
         return None
     try:
-        raw = str(url).strip()
+        raw = html_lib.unescape(str(url).strip())
         if not raw.startswith(("http://","https://")):
             raw = "https://" + raw
         u = urllib.parse.urlparse(raw)
@@ -91,6 +92,46 @@ def canonical_host(canonical_url):
         return None
     return canonical_url.split("/",1)[0].lower()
 
+def choose_canonical_url(source, links):
+    """Pick the object permalink, not a profile/subreddit/container URL."""
+    normalized = [x for x in (normalize_object_url(u) for u in (links or [])) if x]
+    if not normalized:
+        return None
+    adapter = str(source or "").split(":",1)[0]
+
+    def first(pred):
+        for u in normalized:
+            if pred(u):
+                return u
+        return None
+
+    if adapter == "reddit_rss":
+        return (
+            first(lambda u: u.startswith("reddit.com/comments/"))
+            or first(lambda u: u.startswith("reddit.com/gallery/"))
+            or first(lambda u: u.startswith("redd.it/"))
+            or first(lambda u: u.startswith("preview.redd.it/") or u.startswith("external-preview.redd.it/"))
+            or first(lambda u: not re.match(r"^reddit\.com/(?:r|user)/", u, re.I))
+            or normalized[0]
+        )
+    if adapter.startswith("youtube"):
+        return first(lambda u: u.startswith("youtube.com/video/")) or normalized[0]
+    if adapter.startswith("tiktok"):
+        return (
+            first(lambda u: u.startswith("tiktok.com/video/"))
+            or first(lambda u: u.startswith("tiktok.com/tag/"))
+            or normalized[0]
+        )
+    if adapter in {"bluesky_jetstream","mastodon_public"}:
+        return (
+            first(lambda u: any(k in u for k in ("/status/","/statuses/","/post/","/posts/")))
+            or normalized[0]
+        )
+    return (
+        first(lambda u: any(k in u for k in ("/status/","/video/","/comments/","/gallery/","/reel/","/p/")))
+        or normalized[0]
+    )
+
 def text_tokens(text, limit=24):
     toks = []
     seen = set()
@@ -134,10 +175,11 @@ def pick_media_url(values):
             if any(ext in lc for ext in (".jpg",".jpeg",".png",".webp",".avif")) or any(
                 h in lc for h in ("i.ytimg.com","pbs.twimg.com","tiktokcdn","redd.it","preview.redd.it","cdninstagram")
             ):
-                return c[:1000]
+                return html_lib.unescape(c)[:1000]
     return None
 
 def _download(url, timeout=5, limit=3_000_000):
+    url = html_lib.unescape(str(url))
     req = urllib.request.Request(url, headers={"User-Agent":"Mozilla/5.0","Accept":"image/avif,image/webp,image/*,*/*;q=0.8"})
     with urllib.request.urlopen(req, timeout=timeout) as r:
         data = r.read(limit + 1)
@@ -214,8 +256,7 @@ def build_envelope(*, source, post_hash, actor_hash, published_at, first_observe
     clean = (text or "").strip()
     toks = text_tokens(clean)
     tfp = simhash64(toks)
-    normalized_links = [x for x in (normalize_object_url(u) for u in (links or [])) if x]
-    canonical = normalized_links[0] if normalized_links else None
+    canonical = choose_canonical_url(source, links)
     phv = image_phash_views(media_url) if media_url else {"full":None,"center":None,"center60":None,"top87":None,"square":None}
     ph = phv.get("full")
     derivatives = derivative_types(buckets)
