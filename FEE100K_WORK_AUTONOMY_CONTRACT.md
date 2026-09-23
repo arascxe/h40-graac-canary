@@ -49,3 +49,7 @@ UTC time; latest canonical baseline; changes and test/run IDs; evidence/metrics;
 
 WORK RUNTIME MODEL
 ChatGPT Work sessions are bounded; schedule separate recurring Work research/engineering reviews where available. GitHub Actions/DB cron, not Work, implement persistent fast collection. A separate scheduled task can audit milestones and notify; it does not guarantee unbounded autonomous engineering. When a task ends, resume from the durable checkpoint in another Work session.
+
+## 2026-09-23 user objective expansion
+
+The user clarified that the highest priority is USD 100,000 verified net gain, and the income method is flexible. `NET100K_ROUTE_TOURNAMENT_V1.md` is the parallel umbrella decision protocol. This does not retroactively change the frozen FEE100K creator-fee trial, its outcome labels, or any production pipeline. Safe reversible research may compare distinct lawful mechanisms. Existing no-spend/no-autonomous-trade/no-deception limits and explicit approval for financial/public actions remain in force. A report must always distinguish creator fees, realized inventory-sale P&L, other revenue and transferred funds. Treat creator-fee strategy as the current primary candidate, not the definition of success for all future work.
