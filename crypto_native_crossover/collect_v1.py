@@ -217,7 +217,7 @@ def parse_bluesky_search(raw, query, observation_time):
 
 BLUESKY_SEARCH_TERMS=("memecoin","pumpfun")
 
-CRYPTO_NATIVE_TERMS = re.compile(r"\b(memecoin|meme coin|pumpfun|pump\.fun|solana meme|minted|token launch|launchpad)\b", re.I)
+CRYPTO_NATIVE_TERMS = re.compile(r"\b(memecoin|meme coin|pumpfun|pump\.fun|solana|cryptocurrency|bitcoin|crypto|token launch|launchpad)\b", re.I)
 
 async def collect_public_bluesky_jetstream(observed, seconds=18):
     """A bounded *new-post* firehose window; keyword matches are only shadow evidence."""
