@@ -118,6 +118,51 @@ def parse_atom(raw, subreddit, reliability, observation_time):
         })
     return out
 
+def parse_reddit_oauth_entries(entries, subreddit, reliability, observed):
+    """Convert explicitly authorized Reddit Data API results only."""
+    out=[]
+    for d in entries:
+        if not isinstance(d,dict):
+            continue
+        post_id=str(d.get("id") or "").strip()
+        author=str(d.get("author") or "").strip()
+        timestamp=d.get("created_utc")
+        if not post_id or not isinstance(timestamp,(int,float)):
+            continue
+        published=datetime.fromtimestamp(timestamp,timezone.utc).isoformat()
+        if not timely_public_post(published,observed):
+            continue
+        self_object="reddit.com/comments/"+post_id.lower()
+        title=html.unescape(str(d.get("title") or ""))[:250]
+        body=html.unescape(str(d.get("selftext") or ""))[:2000]
+        raw_links=URLS.findall(title+" "+body)
+        if isinstance(d.get("url"),str):
+            raw_links.append(d["url"])
+        urls={object_url(u) for u in raw_links}
+        urls.discard(None)
+        urls.discard(self_object)
+        clean=" ".join(URLS.sub(" ",title+" "+body).split())
+        clean=re.sub(r"(?<!\\w)(?:/u/|u/)[A-Za-z0-9_-]+","[mention]",clean)
+        clean=EMAIL.sub("[redacted-email]",MENTION.sub("[mention]",clean))
+        toks=[]
+        for t in WORD.findall(clean.lower()):
+            if t not in STOP and not t.isdigit() and len(t)<36 and t not in toks:
+                toks.append(t)
+            if len(toks)>=24: break
+        out.append({
+            "post_hash":hid("reddit:"+self_object),
+            "actor_hash":hid("reddit_crypto:"+author.lower()) if author else None,
+            "source_surface":"reddit:r/"+subreddit,
+            "source_reliability":reliability,
+            "published_at":published,
+            "first_observed_at":observed,
+            "linked_object_urls":sorted(urls)[:8],
+            "semantic_tokens":toks,
+            "text_excerpt":clean[:180],
+            "has_exact_outbound_object":bool(urls)
+        })
+    return out
+
 # Public tagged discussions are an additional WEAK sensor. A tag does not
 # establish a buyer, unique meme identity or genuine independent demand.
 MASTODON_TAGS = [
@@ -296,23 +341,46 @@ async def collect_public_bluesky_jetstream(observed, seconds=95, prior_cursor_us
 def collect(timeout=12,prior_cursor_us=None):
     items, health = {}, []
     observed = now()
-    for subreddit, feed, reliability in FEEDS:
-        url = "https://www.reddit.com/r/" + subreddit + "/" + feed + "/.rss?limit=25"
+
+    # Reddit policy requires explicit API approval/OAuth for hosted runners.
+    # Failing anonymous RSS feeds are NOT bypassed or silently treated as zeros.
+    from reddit_oauth_v1 import setup as reddit_setup, get_token as reddit_token
+    from reddit_oauth_v1 import fetch_feed as reddit_fetch, RedditAccessError
+    config,auth_reason=reddit_setup()
+    if config is None:
+        for subreddit,_,_ in FEEDS:
+            health.append({"surface":"reddit:r/"+subreddit,"ok":False,
+                "status":auth_reason,"access_mode":"NO_UNAUTHORIZED_RETRY"})
+    else:
         try:
-            req = urllib.request.Request(url, headers={
-                "User-Agent": "Mozilla/5.0 FEE100K research RSS monitor",
-                "Accept": "application/atom+xml,application/xml;q=0.9",
-            })
-            with urllib.request.urlopen(req, timeout=timeout) as r:
-                blob = r.read(1_000_001)
-            if len(blob) > 1_000_000:
-                raise ValueError("feed exceeds 1MB cap")
-            posts = parse_atom(blob, subreddit, reliability, observed)
-            for p in posts:
-                items[p["post_hash"]] = p
-            health.append({"surface":"reddit:r/"+subreddit,"ok":True,"observed":len(posts)})
-        except Exception as ex:
-            health.append({"surface":"reddit:r/"+subreddit,"ok":False,"error_type":type(ex).__name__})
+            token=reddit_token(config,timeout=timeout)
+        except RedditAccessError as ex:
+            token=None
+            for subreddit,_,_ in FEEDS:
+                health.append({"surface":"reddit:r/"+subreddit,"ok":False,
+                    "error_type":ex.kind,"http_status":ex.http_status,
+                    "retry_after":ex.retry_after,
+                    "access_mode":"APPROVED_OAUTH"})
+        if token:
+            for ix,(subreddit,feed,reliability) in enumerate(FEEDS):
+                try:
+                    entries=reddit_fetch(config,token,subreddit,feed,timeout=timeout)
+                    posts=parse_reddit_oauth_entries(entries,subreddit,reliability,observed)
+                    for p in posts:
+                        items[p["post_hash"]]=p
+                    health.append({"surface":"reddit:r/"+subreddit,"ok":True,
+                        "observed":len(posts),"access_mode":"APPROVED_OAUTH"})
+                except RedditAccessError as ex:
+                    health.append({"surface":"reddit:r/"+subreddit,"ok":False,
+                        "error_type":ex.kind,"http_status":ex.http_status,
+                        "retry_after":ex.retry_after,
+                        "access_mode":"APPROVED_OAUTH"})
+                    if ex.http_status in (401,403,429):
+                        for ss,_,_ in FEEDS[ix+1:]:
+                            health.append({"surface":"reddit:r/"+ss,"ok":False,
+                                "status":"PAUSED_AFTER_AUTH_OR_RATE_LIMIT",
+                                "access_mode":"APPROVED_OAUTH"})
+                        break
     for instance, tag in MASTODON_TAGS:
         url = "https://"+instance+"/api/v1/timelines/tag/"+tag+"?limit=20"
         try:
@@ -394,6 +462,8 @@ def self_test():
     assert masto[0]["actor_hash"] and "acct" not in masto[0]["text_excerpt"]
     from jetstream_replay_v1 import offline_test as jetstream_offline_test
     jetstream_offline_test()
+    from reddit_oauth_v1 import offline_test as reddit_oauth_offline_test
+    reddit_oauth_offline_test()
     bsky_fixture=json.dumps({"posts":[{"uri":"at://did:plc:alice/app.bsky.feed.post/q",
       "author":{"did":"did:plc:alice"},
       "record":{"createdAt":"2026-09-23T16:01:00Z",
