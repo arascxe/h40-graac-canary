@@ -126,3 +126,7 @@ rapid curve progression with relatively few genuine trades
 + canonical creator-fee routing verified.
 
 This is a candidate interaction matrix, not yet a calibrated $100K probability.
+
+## Evidence correction audit — 2026-09-23 (append-only; frozen gates unchanged)
+
+The social-presence graduation proxy in item 7 must **not** be treated as Evidence A on the strength of Kamat's earlier Pump.fun study. Its revised arXiv v5, *Auditing Collector-Generated Graduation Labels on Pump.fun* (https://arxiv.org/pdf/2607.02823), explicitly withdraws the earlier 24-hour graduation rate, cross-period decline and related interpretations because collector terminal labels were not established as platform-side graduation; its prespecified temporal generalization fails. This is a source-specific correction, not proof that social presence has no effect. Until an independent platform-side outcome audit supports it, mark item 7 as *unverified association / distribution-readiness hypothesis* for this project. Do not use any withdrawn headline rate or claimed Telegram lift to estimate P(Y100), select a mint, or retroactively modify the frozen 20-case cohort. Item 8's separate creator-history figures require independent source provenance and outcome-definition verification before any quantitative use. See EXPERIMENT_LOG.md for this audit.
