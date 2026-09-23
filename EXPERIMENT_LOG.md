@@ -21,3 +21,13 @@ No code, schedule, schema, threshold, funds, alert routing or token launch chang
 ### Read-only plan probe, ~19:30 UTC
 
 `EXPLAIN (FORMAT JSON)` for the snapshot pruning DELETE (without executing it) shows a window over an estimated 21,973 snapshot rows, incremental sort, then a full sequential scan and hash join of the snapshot table for deletion. A read-only count found 4,228 object keys and **zero** keys above the 18-row cap at that moment; this full pruning operation was therefore doing no useful deletion in that sample. The count itself took about 50 seconds under current load. A subsequent function-definition query failed with a connection timeout. This supports load triage but does not establish sole causality or justify dropping the immutable retention rule. No changes made.
+
+## 2026-09-23 19:36–19:40 UTC — hourly fail-fast probe
+
+Hypothesis: the prior coverage outage might have resolved, allowing the frozen cohort to be evaluated. Test: inspect the latest crypto workflow event and snapshot timestamp, five latest bridge records, narrow cron status distribution, activity sample, and compact cohort/match counts. Negative control: retain the original ten matched-control labels and classify missed source windows as missing, not negative.
+
+Result: hypothesis rejected. The workflow still has a 15-minute cron declaration but latest eight crypto runs were push events, latest published snapshot remained 17:03:32 UTC, and bridge request 83874 processed at 19:34:03 returned `BRIDGE_HTTP_NULL`. Since 19:26, cron history showed 64 failed/30 succeeded/6 running at the sample; two recent failures specifically said `job startup timeout`. A compact database query found 20 original rows, 20 separate exploratory rows, 66 old crypto posts, 0 exact matches, 0 semantic hints, and 0 mature 24h labels. Several larger or concurrent read-only queries timed out, so database load is itself an observed diagnostic constraint. No candidate or revenue result can be drawn from the zeros.
+
+Security countercheck: table inventory warned of disabled RLS, while `has_schema_privilege` returned false for anon/auth USAGE on `fee100k_private`. Public exposure is not demonstrated. Do not blindly change RLS or grants; verify the Data API boundary and bridge role first.
+
+Decision: FIX, no production mutation. No code, migration, run dispatch, threshold change, financial action or new cohort. This session's identifiers: bridge request 83874; crypto run 35892979601 (prior push run, **not** this session's run); scheduled public propagation run 35910703156 (external production activity, not a crypto run). Documentation-only GitHub commits follow this entry.
