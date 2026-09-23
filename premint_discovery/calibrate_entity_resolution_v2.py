@@ -27,6 +27,10 @@ def views_from_image(src):
     out={"full":_phash_image(src)}
     dx,dy=int(w*.10),int(h*.10)
     out["center"]=_phash_image(src.crop((dx,dy,w-dx,h-dy))) if w-2*dx>=16 and h-2*dy>=16 else None
+    dx2,dy2=int(w*.20),int(h*.20)
+    out["center60"]=_phash_image(src.crop((dx2,dy2,w-dx2,h-dy2))) if w-2*dx2>=16 and h-2*dy2>=16 else None
+    th=int(h*.87)
+    out["top87"]=_phash_image(src.crop((0,0,w,th))) if th>=16 else None
     side=min(w,h); left=(w-side)//2; top=(h-side)//2
     out["square"]=_phash_image(src.crop((left,top,left+side,top+side))) if side>=16 else None
     return out
