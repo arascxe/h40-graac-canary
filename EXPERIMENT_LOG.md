@@ -84,3 +84,22 @@ The one database probe showed many other cron successes around 22:34–22:37 UTC
 A separate automatic read-only origin shadow [run 35929298234](https://github.com/arascxe/h40-graac-canary/actions/runs/35929298234), from source commit [89bb033](https://github.com/arascxe/h40-graac-canary/commit/89bb033c5066eb4bac1704c7e4a3f4c9284cd511), verified four exact mint metadata records. Only Grand Theft Clout exposed a project X account and website; NOTHING and GRANDPA'S INVESTMENT exposed no external social/website fields, while 164 Bucky pointed to a deployer post and an unrelated source page. This is post-mint metadata, not independently timestamped pre-mint demand, and does not validate a pilot.
 
 **Tests / decision.** Snapshot schema/privacy self-tests and both GitHub jobs passed. Economic gate failed: no independent pre-mint exact-object crossover and no user-wallet creator-fee receipt. Primary 20, matched controls, separate discovery cohort and the 210-launch freeze were not altered or pooled. Decision: **FIX / DATA_GAP**. Highest-information safe next test is a source-only shadow dual-lane comparison that starts at live tail while preserving the replay cursor and explicit gap interval; reject if two bounded samples again produce no usable exact-object URL. No production workflow, schema, alert, launch or financial action changed in this session.
+
+## 2026-09-23 23:47 UTC — narrow discovery workflow trigger (production-safe restart-loop fix)
+
+**Hypothesis.** The broad `push.paths: premint_discovery/**` rule causes research Markdown and outcome-audit commits to cancel the four-hour adapter bus under `cancel-in-progress: true`. Restricting push triggers to executable collector inputs will preserve scheduled observation time without changing data semantics.
+
+**Fail-fast evidence.** Actions history showed repeated push-run cancellations, including 35920657734 and 35924345727. At the new checkpoint, scheduled run 35931272889 was active and the latest discovery snapshot was current (23:45:27 UTC), while the exact crypto lane remained stale/partial. This made avoiding further unnecessary restarts higher information value than adding a source or cadence.
+
+**Method/change.** In `.github/workflows/premint-discovery-v2-bridge.yml`, replace the directory wildcard with:
+- `premint_discovery/collect_v2.py`
+- `premint_discovery/envelope_v2.py`
+- the workflow file itself
+
+No schedule, threshold, freeze, source implementation, output contract, credentials, cron, schema or alert route changed.
+
+**Tests.** PyYAML load succeeded. Path-match controls passed: two research Markdown files => no trigger; both executable inputs and the workflow file => trigger. `git diff --check` passed. Production commit: [89f29d518b10a31a4c05400e1c5f083b683a9014](https://github.com/arascxe/h40-graac-canary/commit/89f29d518b10a31a4c05400e1c5f083b683a9014).
+
+**Runtime result.** The workflow-file change intentionally caused one final push run [35935251897](https://github.com/arascxe/h40-graac-canary/actions/runs/35935251897), which entered `in_progress`; concurrency cancelled predecessor scheduled run [35931272889](https://github.com/arascxe/h40-graac-canary/actions/runs/35931272889). This is a technical-start PASS only. Completion and the first published cycle still require observation. Rollback: revert commit 89f29d5.
+
+**Economic result.** None. Primary 20 and separate exploratory 20 remain frozen and distinct; exact matches remain zero under incomplete coverage; no verified user-wallet creator-fee receipt or pilot candidate.
