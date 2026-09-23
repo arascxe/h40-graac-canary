@@ -1,0 +1,28 @@
+name: FEE100K read-only receipt verifier check
+on:
+  push:
+    paths:
+      - ".github/workflows/fee100k-verify-auditor.yml"
+permissions:
+  contents: read
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - uses: actions/checkout@v4
+      - name: Compile and check two claims plus unrelated transfer
+        run: |
+          python3 -m py_compile fee_audit/creator_receipt_v1.py
+          python3 fee_audit/creator_receipt_v1.py --creator 4b9eNunmdJCdbtYTPqMwU3wCVopEYaM8Dm5xBPK3G5Gb --signature 4WwW7dMHtRbSYsgTagyB2CTFNcRpudChmMwPEbGXRYE6Jvk7P6SBeitNPcqgrRf5MadsLnr7iT1cLyUeREQQBtdF --signature 4nNU3G9zBioKP7frGn2ekFSTAbHjbiAiLtdcasmaJzPSqHuB4aKnXUTiz5FEQNi2RvJvkgcDzyM6ZrUJ4e1mLRvo | tee /tmp/claims.jsonl
+          python3 fee_audit/creator_receipt_v1.py --creator BXAWg4JbaeyvAHpiyYQ3Xr3bUh6FsyDHwwSkB5dmyGF --signature 5cUyCVFVPkSGyNYZnpKM5U2cUc94T1NKmzgimTGLnbuUV17JVNdQdxyVhewKH1CPVPt1pAVbLioaUHZfj515232Q | tee /tmp/control.jsonl
+          python3 - <<'PY'
+          import json
+          claims=[json.loads(x) for x in open('/tmp/claims.jsonl')]
+          control=json.loads(open('/tmp/control.jsonl').read())
+          assert len(claims)==2
+          assert all(x['classification']=='VERIFIED_CREATOR_LEVEL_AMM_FEE_RECEIPT' and x['mint_attribution']=='UNKNOWN' for x in claims)
+          assert sum(x['amount_lamports'] for x in claims)==3824032551
+          assert control['classification']=='UNVERIFIED'
+          print('PASS: claims reconcile; unrelated wallet inflow excluded; mint attribution unknown')
+          PY
