@@ -1,0 +1,37 @@
+name: FEE100K claim transfer attribution check
+on:
+  push:
+    paths:
+      - ".github/workflows/fee100k-claim-detail.yml"
+permissions:
+  contents: read
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - name: Inspect two already identified public claims
+        run: |
+          python3 - <<'PY'
+          import urllib.request,json
+          wallet="4b9eNunmdJCdbtYTPqMwU3wCVopEYaM8Dm5xBPK3G5Gb"
+          sigs=["4WwW7dMHtRbSYsgTagyB2CTFNcRpudChmMwPEbGXRYE6Jvk7P6SBeitNPcqgrRf5MadsLnr7iT1cLyUeREQQBtdF","4nNU3G9zBioKP7frGn2ekFSTAbHjbiAiLtdcasmaJzPSqHuB4aKnXUTiz5FEQNi2RvJvkgcDzyM6ZrUJ4e1mLRvo"]
+          for sig in sigs:
+              data=json.dumps({"jsonrpc":"2.0","id":1,"method":"getTransaction","params":[sig,{"encoding":"jsonParsed","maxSupportedTransactionVersion":0}]}).encode()
+              req=urllib.request.Request("https://api.mainnet-beta.solana.com",data,{"Content-Type":"application/json","User-Agent":"FEE100K-readonly-claim-detail"})
+              with urllib.request.urlopen(req,timeout=15) as r: tx=json.load(r).get("result")
+              if not tx: raise RuntimeError("unavailable transaction "+sig)
+              message=tx["transaction"]["message"]; meta=tx["meta"]
+              keys=message["accountKeys"]
+              i=next(i for i,x in enumerate(keys) if (x.get("pubkey") if isinstance(x,dict) else x)==wallet)
+              ins=message.get("instructions") or []
+              inner=meta.get("innerInstructions") or []
+              parsed=[]
+              for group in inner:
+                  for x in group.get("instructions") or []:
+                      p=x.get("parsed") or {}
+                      if isinstance(p,dict) and p.get("type") in ("transfer","transferChecked"):
+                          parsed.append({"type":p.get("type"),"program":x.get("program"),"info":p.get("info")})
+              out={"signature":sig,"wallet_delta_lamports":meta["postBalances"][i]-meta["preBalances"][i],"tx_fee_lamports":meta.get("fee"),"outer_instructions":[{"programId":x.get("programId"),"parsed":x.get("parsed"),"accounts":x.get("accounts")} for x in ins],"inner_transfers":parsed[:12],"fee_logs":[x for x in meta.get("logMessages") or [] if "Instruction:" in x and "Fee" in x][:8]}
+              print(json.dumps(out,separators=(",",":")))
+          PY
