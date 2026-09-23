@@ -1,0 +1,40 @@
+name: FEE100K four-case origin shadow
+
+on:
+  push:
+    paths:
+      - .github/workflows/fee100k-origin-shadow.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - name: Fetch exact-mint first-party metadata
+        run: |
+          python3 - <<'PY'
+          import json, subprocess, time
+          mints=[
+            "39yyKzPLGhQysVGjYs4KkTf3NFZ91DchQHnaCLvxa6ac",
+            "2Di2EFrJtxSRFi3JcvCipmxXDWzU4FmpkeqaqnCopump",
+            "2E3wgKGZGSXiftBPSTmMS2WjCf3WJCn7oSQkEjhFpump",
+            "3Lit1s5ZGHdcDxSu3sgEJ1qgSoSLXtbtmQJkuxCSpump",
+          ]
+          keys=("mint","name","symbol","description","creator","created_timestamp","twitter","telegram","website","is_currently_live","complete","market_cap")
+          for mint in mints:
+            url="https://frontend-api-v3.pump.fun/coins/"+mint
+            p=subprocess.run(["curl","-sS","--max-time","15","-A","FEE100K-readonly-origin/1.0","-w","\\n__STATUS__%{http_code}",url],capture_output=True,timeout=20)
+            body,sep,status=p.stdout.rpartition(b"\n__STATUS__")
+            row={"mint":mint,"http":status.decode(errors="replace").strip()}
+            if sep and status.strip()==b"200":
+              try:
+                d=json.loads(body)
+                row.update({k:d.get(k) for k in keys if k in d})
+              except ValueError:row["error"]="BAD_JSON"
+            print(json.dumps(row,ensure_ascii=False))
+            time.sleep(3.1)
+          PY
