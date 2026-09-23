@@ -6,7 +6,11 @@ on:
   workflow_dispatch:
   push:
     paths:
-      - "premint_discovery/**"
+      # Restart the four-hour collector only when its executable inputs change.
+      # Research notes and outcome reports under premint_discovery/ must not
+      # cancel a healthy observation run.
+      - "premint_discovery/collect_v2.py"
+      - "premint_discovery/envelope_v2.py"
       - ".github/workflows/premint-discovery-v2-bridge.yml"
 
 permissions:
