@@ -1,0 +1,80 @@
+name: FEE100K frozen cohort early trade shadow
+
+on:
+  push:
+    paths:
+      - .github/workflows/fee100k-cohort-trade-shadow.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    timeout-minutes: 6
+    steps:
+      - name: Restore frozen baseline
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh run download 35927052834 -R arascxe/h40-graac-canary -n matched-launch-shadow -D baseline
+
+      - name: Sample first-party trades with explicit coverage
+        run: |
+          python3 - <<'PY'
+          import datetime as dt
+          import json
+          import subprocess
+          import time
+          import urllib.parse
+          from pathlib import Path
+
+          baseline = json.loads(Path('baseline/matched-launch-shadow.json').read_text())
+          rows = baseline['launches']
+          # Fixed by mint before reading any subsequent trade or outcome.
+          chosen = sorted(rows,key=lambda r:r['mint'])[:12]
+          results = []
+          for row in chosen:
+              mint = row['mint']
+              url = 'https://swap-api.pump.fun/v2/coins/' + mint + '/trades?' + urllib.parse.urlencode({'limit':100,'cursor':'0','program':'pump'})
+              p = subprocess.run(['curl','-sS','--max-time','18','-A','FEE100K-readonly-cohort/1.0',
+                                  '-w','\n__STATUS__%{http_code}',url],capture_output=True,timeout=23)
+              body, sep, status = p.stdout.rpartition(b'\n__STATUS__')
+              result = {'mint':mint,'created_timestamp_ms':row['created_timestamp_ms'],'source_http':status.decode(errors='replace')[:10] if sep else 'UNKNOWN'}
+              if sep and status.strip() == b'200':
+                  try:
+                      data = json.loads(body)
+                      trades, pagination = data.get('trades'), data.get('pagination')
+                      if not isinstance(trades,list) or not isinstance(pagination,dict):
+                          raise ValueError('malformed trade envelope')
+                      birth = row['created_timestamp_ms'] / 1000
+                      early = []
+                      for trade in trades:
+                          timestamp = dt.datetime.fromisoformat(str(trade.get('timestamp','')).replace('Z','+00:00')).timestamp()
+                          if birth <= timestamp < birth+300 and trade.get('userAddress'):
+                              early.append(trade)
+                      result.update({'coverage':'COMPLETE_FIRST_PAGE' if not pagination.get('hasMore') else 'TRUNCATED_FIRST_PAGE',
+                                     'rows_seen':len(trades),'first_5m_rows_observed':len(early),
+                                     'first_5m_wallets_observed':len({t['userAddress'] for t in early}),
+                                     'first_5m_usd_observed':round(sum(float(t.get('amountUsd') or 0) for t in early),2)})
+                  except (ValueError,TypeError,KeyError) as exc:
+                      result['coverage']='PARSE_ERROR:' + type(exc).__name__
+              else:
+                  result['coverage']='SOURCE_ERROR'
+              results.append(result)
+              time.sleep(3.2)
+          out = {'baseline_run':35927052834,'observed_utc':dt.datetime.now(dt.timezone.utc).isoformat(),
+                 'selection':'12 mint-sorted launches from immutable 210-mint baseline, no outcome sorting',
+                 'results':results,'note':'A truncated first page is a lower-bound observation, not a complete first-five-minute total. Wallet count is not beneficial-owner count.'}
+          Path('cohort-trade-shadow.json').write_text(json.dumps(out,indent=2))
+          print(json.dumps(out))
+          PY
+
+      - uses: actions/upload-artifact@v4
+        if: success()
+        with:
+          name: cohort-trade-shadow
+          path: cohort-trade-shadow.json
+          retention-days: 7
