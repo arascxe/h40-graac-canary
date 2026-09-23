@@ -1,0 +1,82 @@
+name: FEE100K maker composition shadow
+
+on:
+  push:
+    paths:
+      - .github/workflows/fee100k-maker-composition-shadow.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    timeout-minutes: 4
+    steps:
+      - name: Restore frozen same-time launches
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh run download 35927052834 -R arascxe/h40-graac-canary -n matched-launch-shadow -D baseline
+
+      - name: Inspect four contrasting early flows
+        run: |
+          python3 - <<'PY'
+          import datetime as dt
+          import json
+          import subprocess
+          import time
+          import urllib.parse
+          from collections import defaultdict
+          from pathlib import Path
+
+          launches = {r['mint']:r for r in json.loads(Path('baseline/matched-launch-shadow.json').read_text())['launches']}
+          mints = [
+              '39yyKzPLGhQysVGjYs4KkTf3NFZ91DchQHnaCLvxa6ac', # highest early observed of 12
+              '2Di2EFrJtxSRFi3JcvCipmxXDWzU4FmpkeqaqnCopump', # middle
+              '2E3wgKGZGSXiftBPSTmMS2WjCf3WJCn7oSQkEjhFpump', # few makers
+              '3Lit1s5ZGHdcDxSu3sgEJ1qgSoSLXtbtmQJkuxCSpump', # no early trade
+          ]
+          results=[]
+          for mint in mints:
+              launch=launches[mint]
+              birth=launch['created_timestamp_ms']/1000
+              url='https://swap-api.pump.fun/v2/coins/'+mint+'/trades?'+urllib.parse.urlencode({'limit':100,'cursor':'0','program':'pump'})
+              p=subprocess.run(['curl','-sS','--max-time','18','-A','FEE100K-readonly-cohort/1.0',
+                                '-w','\n__STATUS__%{http_code}',url],capture_output=True,timeout=23)
+              body,sep,status=p.stdout.rpartition(b'\n__STATUS__')
+              if not sep or status.strip()!=b'200':
+                  results.append({'mint':mint,'coverage':'SOURCE_ERROR'});time.sleep(3.2);continue
+              envelope=json.loads(body)
+              trades=envelope['trades'];pagination=envelope['pagination']
+              if pagination.get('hasMore'):
+                  results.append({'mint':mint,'coverage':'TRUNCATED_FIRST_PAGE'});time.sleep(3.2);continue
+              early=[]
+              for t in trades:
+                  try:
+                      when=dt.datetime.fromisoformat(str(t['timestamp']).replace('Z','+00:00')).timestamp()
+                      amount=float(t['amountUsd'])
+                      if birth<=when<birth+300 and amount>0 and t.get('userAddress'):
+                          early.append((t['userAddress'],str(t.get('type') or '').lower(),amount))
+                  except (KeyError,ValueError,TypeError):
+                      continue
+              totals=defaultdict(float)
+              for wallet,kind,amount in early:totals[wallet]+=amount
+              gross=sum(totals.values())
+              creator=launch['creator']
+              results.append({'mint':mint,'name':launch['name'],'coverage':'COMPLETE_FIRST_PAGE',
+                              'first_5m_trades':len(early),'unique_wallets':len(totals),'gross_usd':round(gross,2),
+                              'buys':sum(kind=='buy' for _,kind,_ in early),
+                              'sells':sum(kind=='sell' for _,kind,_ in early),
+                              'creator_trades':sum(wallet==creator for wallet,_,_ in early),
+                              'creator_gross_usd':round(totals[creator],2),
+                              'top_wallet_share':round(max(totals.values())/gross,4) if gross else None,
+                              'top_3_wallet_share':round(sum(sorted(totals.values(),reverse=True)[:3])/gross,4) if gross else None})
+              time.sleep(3.2)
+          out={'baseline_run':35927052834,'observed_utc':dt.datetime.now(dt.timezone.utc).isoformat(),
+               'selection':'Four contrasting cases from prior 12-mint, mint-sorted sample; retrospective mechanism probe only',
+               'results':results,'limit':'No funding-graph or beneficial-owner proof; creator address match only direct address.'}
+          Path('maker-composition-shadow.json').write_text(json.dumps(out,indent=2))
+          print(json.dumps(out))
+          PY
