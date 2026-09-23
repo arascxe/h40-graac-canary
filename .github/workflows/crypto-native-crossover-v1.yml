@@ -22,6 +22,8 @@ jobs:
     timeout-minutes: 5
     steps:
       - uses: actions/checkout@v4
+      - name: Install bounded public-stream client
+        run: python3 -m pip install --quiet --disable-pip-version-check 'websockets>=13,<16'
       - name: Offline privacy and matching self-test
         run: python3 crypto_native_crossover/collect_v1.py --self-test
       - name: Collect public crypto-community object citations
