@@ -8,66 +8,69 @@ on:
 
 permissions:
   contents: read
-  actions: read
 
 jobs:
   inspect:
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 4
     steps:
-      - name: Restore existing read-only census artifact
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          mkdir -p runtime
-          gh run download 35851840827 -R arascxe/h40-graac-canary -n mdrtf-state -D runtime
-
-      - name: Bounded same-window launch audit
+      - name: Freeze a bounded first-party launch cohort
         run: |
           python3 - <<'PY'
           import datetime as dt
           import json
-          import sqlite3
+          import subprocess
+          import time
+          import urllib.parse
           from pathlib import Path
 
-          db = Path('runtime/mdrtf_future_ledger.sqlite3')
-          conn = sqlite3.connect(f'file:{db}?mode=ro', uri=True)
-          conn.row_factory = sqlite3.Row
-          tables = {r[0] for r in conn.execute("select name from sqlite_master where type='table'")}
-          required = {'pump_launches', 'pump_raw_trades', 'pump_trade_fetches', 'pump_census_cuts'}
-          if not required <= tables:
-              raise SystemExit('missing census tables: ' + repr(sorted(required - tables)))
-          target = '2ekqDh2VNP5mfMUh7fngof1APUBmkAsJJATmDZBapump'
-          row = conn.execute('select * from pump_launches where mint=?', (target,)).fetchone()
-          if row:
-              center = dt.datetime.fromisoformat(row['created_at'].replace('Z', '+00:00'))
-              selection = 'EPEP_CREATION_PLUS_MINUS_15M'
-          else:
-              center = dt.datetime(2026, 9, 23, 16, 45, tzinfo=dt.timezone.utc)
-              selection = 'POOL_CREATION_PLUS_MINUS_15M_EPEP_MINT_ABSENT'
-          start = (center - dt.timedelta(minutes=15)).isoformat().replace('+00:00', 'Z')
-          end = (center + dt.timedelta(minutes=15)).isoformat().replace('+00:00', 'Z')
-          launches = conn.execute('select mint,created_at,first_seen_at,creator,name,symbol,trade_coverage_state from pump_launches where created_at>=? and created_at<? order by created_at,mint', (start,end)).fetchall()
-          cuts = conn.execute('select source_state,count(*) n from pump_census_cuts where request_started_at>=? and request_started_at<? group by source_state', (start,end)).fetchall()
-          # Deterministic controls were selected from launch time, without using outcome labels.
-          controls = sorted((r for r in launches if r['mint'] != target), key=lambda r: r['mint'])[:12]
-          selected = ([row] if row else []) + controls
-          cases = []
-          for launch in selected:
-              birth = dt.datetime.fromisoformat(launch['created_at'].replace('Z','+00:00'))
-              stop = (birth + dt.timedelta(minutes=5)).isoformat().replace('+00:00','Z')
-              flow = conn.execute('select count(*) trades,count(distinct wallet) wallets,sum(usd_value) gross_usd from pump_raw_trades where mint=? and block_timestamp>=? and block_timestamp<?', (launch['mint'],launch['created_at'],stop)).fetchone()
-              fetches = conn.execute('select coverage_state,count(*) n from pump_trade_fetches where mint=? group by coverage_state', (launch['mint'],)).fetchall()
-              cases.append({'mint':launch['mint'],'created_at':launch['created_at'],'first_seen_at':launch['first_seen_at'],'name':launch['name'],'creator':launch['creator'],'first_5m_trades_observed':flow['trades'],'first_5m_wallets_observed':flow['wallets'],'first_5m_gross_usd_observed':flow['gross_usd'],'trade_fetch_coverage':{r['coverage_state']:r['n'] for r in fetches}})
-          out = {'artifact_run':35851840827,'selection':selection,'window':[start,end],'launches_in_window':len(launches),'census_cut_states':{r['source_state']:r['n'] for r in cuts},'cases':cases,'note':'Missing trades or missing pair are UNKNOWN, never zero outcome. Current fee and premint distribution are not proven.'}
-          Path('matched-launch-shadow.json').write_text(json.dumps(out,indent=2,default=str))
-          print(json.dumps(out,default=str))
+          started = dt.datetime.now(dt.timezone.utc)
+          pages = []
+          for page in range(3):
+              url = 'https://frontend-api-v3.pump.fun/coins?' + urllib.parse.urlencode({
+                  'offset': page * 70, 'limit': 70, 'sort': 'created_timestamp',
+                  'order': 'DESC', 'includeNsfw': 'true'})
+              process = subprocess.run(['curl','-sS','--max-time','15','-A','FEE100K-readonly-cohort/1.0',
+                                        '-w','\n__STATUS__%{http_code}',url],
+                                       capture_output=True,timeout=20)
+              body, sep, status = process.stdout.rpartition(b'\n__STATUS__')
+              if not sep or status.strip() != b'200':
+                  raise SystemExit(f'page {page} source error: {status[:30]!r}')
+              data = json.loads(body)
+              if not isinstance(data,list) or not data:
+                  raise SystemExit(f'page {page} empty or invalid')
+              pages.append(data)
+              time.sleep(1)
+
+          launches = {}
+          for page in pages:
+              for item in page:
+                  if item.get('program') != 'pump' or not item.get('mint') or not item.get('created_timestamp'):
+                      continue
+                  launches[item['mint']] = {
+                      'mint':item['mint'],'created_timestamp_ms':item['created_timestamp'],
+                      'creator':item.get('creator'),'name':item.get('name'),
+                      'symbol':item.get('symbol'),'complete_at_freeze':item.get('complete'),
+                  }
+          if len(launches) < 100:
+              raise SystemExit(f'incomplete baseline: {len(launches)} unique Pump launches')
+          rows = sorted(launches.values(),key=lambda r:(r['created_timestamp_ms'],r['mint']))
+          result = {
+              'freeze_utc':started.isoformat(),'source':'Pump first-party recent coins, 3x70',
+              'coverage':'BASELINE_ONLY; pagination overlap with prior snapshot unverified',
+              'page_counts':[len(p) for p in pages],'unique_pump_launches':len(rows),
+              'oldest_created_ms':rows[0]['created_timestamp_ms'],
+              'newest_created_ms':rows[-1]['created_timestamp_ms'],
+              'selection':'ALL returned launches frozen before subsequent outcomes; missing future pair or trade is UNKNOWN',
+              'launches':rows,
+          }
+          Path('matched-launch-shadow.json').write_text(json.dumps(result,ensure_ascii=False,separators=(',',':')))
+          print(json.dumps({k:v for k,v in result.items() if k!='launches'}))
           PY
 
       - uses: actions/upload-artifact@v4
-        if: always()
+        if: success()
         with:
           name: matched-launch-shadow
           path: matched-launch-shadow.json
           retention-days: 7
-          if-no-files-found: ignore
