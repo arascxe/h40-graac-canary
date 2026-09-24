@@ -98,8 +98,6 @@ This technical fix prevents future research-note commits from repeatedly discard
 ### 23:48 UTC verification addendum
 
 Replacement run [35935251897](https://github.com/arascxe/h40-graac-canary/actions/runs/35935251897) published cycle 1 at 23:48:29 UTC. The valid `discovery_adapter_bus_v2` snapshot contained 66 items, 57 independent actor hashes and Bluesky/YouTube/Reddit/Mastodon/TikTok-bridge source mix. Reddit RSS had one r/memes HTTP 429 and the direct TikTok Creative Center endpoint returned code 40101; those source-specific gaps remain explicit. No additional adapter-bus run was created by the three root documentation commits. Trigger-fix runtime verification is PASS for first-cycle publication; long-run and next-schedule verification remain pending.
-
-
 ## 2026-09-24 02:52 UTC — discovery continuity PASS; keyword replay structurally diverging
 
 Measured follow-up after trigger narrowing: the replacement discovery adapter bus remained alive through cycle 124 and published a current snapshot at 02:50:35 UTC. The snapshot contained 37 bounded items from 34 actor hashes; 35 had normalized platform links, with Bluesky live-tail transport observing 3,113 messages in 90 seconds. This closes the narrow engineering question: research-note commits no longer restart the bus and a fresh public-object stream can remain continuous. It does **not** establish independent crypto demand or economic lift.
@@ -113,3 +111,9 @@ The Supabase RLS advisory for 23 research tables remains a defense-in-depth warn
 Economic state is unchanged: `ACCESS_PARTIAL`, no user-controlled wallet receipt, no validated route and no pilot-ready candidate. The frozen 20 and 210-launch cohorts were not changed.
 
 Decision: `DISCOVERY_LIVE_CONTINUITY_PASS / CRYPTO_KEYWORD_REPLAY_FAIL / ACCESS_PARTIAL`. The next high-information source experiment must change method class: object-first matching from the already-live discovery bus into bounded crypto-native references, rather than spending more free capacity replaying the full keyword stream. Run it as a shadow join with explicit gap intervals and exact canonical URLs; reject semantic-only matches and preserve all original first-observed times.
+
+### 02:55 UTC capacity addendum
+
+The database-size measurement was independently repeated at 433,630,355 bytes, about 86.7% of Supabase Free's current 500 MB database allowance. A five-second-bounded catalog probe identified `net._http_response` as the largest relation (91,512,832 bytes total). It held 6,708 responses from the preceding six hours; 5,589 were older than one hour and response content represented 161,786,521 logical bytes before storage compression. This supports a retention-pressure hypothesis, but does not prove those responses are safe to delete or that it alone explains all database growth.
+
+This session made no row, schema, cron, response, production workflow, alert, freeze or financial change. The immediate decision is `CRITICAL_CAPACITY / DATA_GAP`: inspect response consumers and retention ownership before any guarded reclaim, and do not add ingestion while the project is near its free database limit.

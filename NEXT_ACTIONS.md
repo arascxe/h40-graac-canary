@@ -114,3 +114,10 @@ If access passes, use the frozen 210-mint baseline and, at or after 2026-09-24 2
 ### 23:48 UTC follow-up refinement
 
 First-cycle publication for 35935251897 passed. Do not rerun it. The remaining operational proof is passive: confirm that research-note commits no longer create adapter-bus runs and that the next genuine schedule proceeds without cancellation. Continue prioritizing the separate stale crypto cursor and the remaining three fee-access cases only after long jobs clear.
+## Checkpoint 2026-09-24 02:55 UTC — capacity incident takes precedence
+
+1. Treat database capacity as the immediate engineering blocker: 433,630,355 bytes is ~86.7% of the current 500 MB Free allowance. Do not add ingestion, tables, cadence or broad scans.
+2. Before deleting anything, identify every cron/function that reads `net._http_response`, verify its existing six-hour boundary, and calculate a dry-run reclaim for a shorter horizon. Only propose a guarded retention change if completed responses are already consumed and immutable evidence is stored elsewhere. Preserve a one-migration rollback and validate bridge delivery before/after. Never purge evidence tables or first freezes to gain space.
+3. Keep crypto crossover `DATA_GAP`: run 35940133028 ended 6h28m40s stale and the next declared schedules did not appear by 02:52 UTC. Do not raise the 80,000-message budget while long Actions jobs remain active. Prior two live-tail shadows were fresh but produced zero usable exact-object URLs, so do not repeat them without a different source/matching hypothesis.
+4. Preserve primary 20, matched controls, separate exploratory 20 and frozen 210 launches. Do not evaluate the 210 cohort before 2026-09-24 22:13 UTC or re-run it hourly.
+5. Capital action remains unlicensed. Verified user-wallet creator-fee receipts remain zero; the remaining three 2+2 fee-access cases wait until capacity is safe.
