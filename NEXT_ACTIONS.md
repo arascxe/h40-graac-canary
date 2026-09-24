@@ -143,3 +143,11 @@ Treat the three consecutive family-lane timeouts and 89.2% database use as an ac
 Do not pause job 101 solely from its failures: the repository does not contain a sufficient versioned definition/dependency map to prove that a pause is backward-compatible. The single next safe test remains a read-only ownership/consumer census after timeout pressure eases, limited to the function/job definitions and pending response IDs required to specify an expanded keep rule and a reversible pause/threshold plan. Acceptance requires zero at-risk consumer responses, bounded lock/rebuild time and unchanged evidence/bridge counts.
 
 Continue passive GitHub/source observation only. Crypto exact-match zero remains `DATA_GAP`; discovery freshness does not substitute for it. Preserve all frozen cohorts and wait for the 210-launch maturity gate at 22:13 UTC.
+
+### 2026-09-24 07:50 UTC — reclaim classification gate
+
+Family-lane has recovered for five consecutive runs, so do not pause job 101 now. Capacity remains the blocker at ~89.6%; do not interpret cron recovery as permission to add work.
+
+Before any compactor or retention change, version the response ownership rule that separates referenced unprocessed FEE100K IDs, recent legacy/in-flight IDs and completed/unreferenced candidates. Dry-run only after the keep rule covers `WATCHDOG_TELEGRAM`, turnover debug, SOL-price and the four identified legacy processors. Require a post-reclaim estimate below 75%, bounded lock/rebuild time, unchanged bridge/evidence counts and a tested threshold rollback. Do not delete first freezes or durable evidence.
+
+Do not repeat primary-20, exploratory-20, exact-match or 210-launch analysis before a new checkpoint or the 22:13 UTC maturity gate. Continue passive source observation; crypto remains `DATA_GAP` and no financial action is licensed.

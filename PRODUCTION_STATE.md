@@ -152,7 +152,6 @@ Automatic GitHub activity was unchanged in economic meaning. Discovery run 35958
 
 Per fail-fast rule, no second SQL, EXPLAIN, full-table/cohort count or job rerun was attempted. Repository-only dependency search did not find the family-lane cron/function definition outside the durable state notes, so pausing job 101 could not be proven backward-compatible or given a verified rollback from repository evidence alone. Production cron, schema, compactor, threshold, alert and workflows were left unchanged. Primary 20, controls, exploratory 20 and the 210 freeze were not re-run or edited; no verified receipt or pilot appeared.
 
-
 ## 2026-09-24 07:10 UTC — storage consumer census; no safe reclaim yet
 
 Supabase remained `ACTIVE_HEALTHY`; independent 06:20–07:08 UTC logs contained no timeout, connection or disk error. The single bounded health transaction measured database size at 447,442,067 bytes, about 89.5% of the 500 MB Free allowance. Growth since 06:20 was 1,318,912 bytes. The latest hour contained no failed cron row and the previously unstable family-lane job 101 succeeded three times, most recently at 07:03:10 UTC. This is current recovery, not root-cause closure.
@@ -164,3 +163,11 @@ This session completed the missing consumer census. Thirty-six database function
 No request was marked processed, no response deleted, no compactor/cron/function/schema threshold changed, and no new ingestion was added. The live discovery and frozen scientific cohorts remain untouched. Object-first crossover work stays paused until capacity safety is established.
 
 Decision: `CRITICAL_CAPACITY / RECLAIM_NOT_YET_SAFE`. The next safe engineering step is a shadow classification of the 6,585 response rows into (a) referenced unprocessed FEE100K IDs, (b) recent legacy/in-flight IDs, and (c) completed/unreferenced reclaim candidates, followed by a dry-run size and lock-duration estimate. Only category (c) may be eligible for a guarded retention migration; immutable evidence tables are excluded.
+
+### 2026-09-24 07:50 UTC — timeout recovery holds; storage still grows
+
+This Work session read logs first. No timeout, connection or disk error appeared in 06:15–07:51 UTC. One three-second-bounded read-only checkpoint measured 448,195,731 bytes (~89.6% of the 500 MB allowance), 753,664 bytes above the separate 07:10 automatic census. Family-lane job 101 succeeded at 06:23, 06:43, 07:03, 07:23 and 07:43 UTC; compactor job 96 also kept succeeding without reaching its activation threshold. Recovery is operational only; storage risk is unresolved.
+
+Automatic production activity remained distinct from this check. Discovery run 35958159932 was still active and published a fresh cycle-110 snapshot at 07:49:30 UTC (37 items, 34 actor hashes, 32 platform links). TikTok, public-propagation and MDRTF runs remained in progress. Crypto run 35960321559 was still the newest crypto snapshot; its stale cursor and `DATA_GAP` classification were unchanged. No exact-object candidate, pilot or verified user-wallet receipt appeared.
+
+No response classification, cohort count, EXPLAIN, rerun, threshold, cron, schema, workflow or alert change was attempted. Primary 20, controls, exploratory 20 and the frozen 210 remain untouched.

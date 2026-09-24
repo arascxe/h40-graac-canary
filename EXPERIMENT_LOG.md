@@ -158,3 +158,13 @@ GitHub/source countercheck: long discovery/TikTok/propagation jobs completed, bu
 **Independent source check.** Discovery run 35958159932 remained fresh at cycle 51, while crypto run 35960321559 remained the newest crypto snapshot and stayed `DATA_GAP`. Four long Actions jobs still overlapped. No exact-object candidate entered manual adjudication.
 
 **Decision.** `CRITICAL_CAPACITY / ACTIVE_FAMILY_TIMEOUT / NO_SAFE_MUTATION_PROVEN`. Freeze new workload and preserve evidence. No pilot, fee receipt or economic validation.
+
+## 2026-09-24 07:10–07:50 UTC — consumer census and passive recovery verification
+
+**Automatic work before this session.** A separate bounded consumer census recorded by main commit `2b150e90672665e26f72dd987280981768cb1cf0` found 36 functions reading `net._http_response`, including four legacy public processors and two `net` internals. It measured 6,585 response rows/92,594,176 relation bytes and 72 unprocessed FEE100K requests, including 54 stale `WATCHDOG_TELEGRAM` requests omitted from the typed closer. It changed no rows, cron, function or threshold.
+
+**This session's question/method.** Did timeout recovery persist while capacity remained below the automatic compactor threshold? Read independent logs first, then ran one three-second read-only query limited to database size and job 96/101 history. Read current GitHub runs and public snapshots. Did not repeat the frozen cohort or exact-match database counts.
+
+**Result.** No timeout-class log appeared after 06:15 UTC. Job 101 completed five consecutive runs from 06:23 through 07:43 UTC; job 96 also continued succeeding. Database size nevertheless increased to 448,195,731 bytes (~89.6%). Discovery remained fresh at 07:49, but crypto-native coverage did not advance beyond the stale 05:31 snapshot. Technical recovery therefore does not close `CRITICAL_CAPACITY` or `CRYPTO_DATA_GAP`.
+
+**Decision/test status.** The consumer census rejects an immediate unguarded threshold reduction or manual compactor call. The next classification query was not run under near-90% storage because its legacy/in-flight ownership rules are not yet versioned; repeating counts would add little information. No economic validation, candidate or receipt.
