@@ -207,3 +207,23 @@ Database size reached 450,989,203 bytes, about 90.2% of the 500 MB Free allowanc
 Automatic GitHub activity was distinct from this session. Discovery run 36006820076 and TikTok run 36007889742 were in progress; the discovery branch published a fresh 13:56:11 UTC cycle-14 snapshot with 36 items and 33 independent actor hashes. MDRTF run 35992199079 and public-propagation run 36006170183 were also in progress. No crypto-native snapshot followed scheduled run 35987232148: its source cursor still ended at 2026-09-23 19:14:22 UTC, about 18h44m behind at this checkpoint. Its zero exact-object result remains `DATA_GAP`, not a prospective or economic negative.
 
 Primary 20, matched controls, separate exploratory 20 and frozen 210 were not re-run, re-counted or edited. The 210 maturity gate remains 22:13 UTC. No manually verifiable independent pre-mint exact-object candidate, pilot, user-wallet creator-fee receipt or revenue milestone appeared. This session changed only durable state notes; production workflows, database schema/cron, compactor, thresholds, alerts and financial state were untouched.
+
+
+### 2026-09-24 15:14 UTC — response ownership census isolates the reclaimable majority
+
+Supabase remained project-level `ACTIVE_HEALTHY`; the 13:58–15:14 UTC independent PostgreSQL log window contained no timeout, disk or connection-class event. Under the fail-fast rule, one three-second-bounded read-only census was run and no second SQL, EXPLAIN, rerun or mutation followed.
+
+The census classified all 6,712 rows in `net._http_response` by direct ownership in `public.fee100k_http_request_v1`:
+
+- 22 rows / 283,640 logical content bytes: referenced by still-unprocessed FEE100K requests; preserve.
+- 6,669 rows / 155,306,208 logical content bytes: referenced by already-processed FEE100K requests.
+- 7 rows / 46,711 logical content bytes: no FEE100K owner and newer than two hours; treat as possible legacy/in-flight.
+- 14 rows / 86,518 logical content bytes: no FEE100K owner and at least two hours old; legacy ownership still unresolved.
+
+Thus 99.36% of response rows are no longer an unidentified legacy population: they are directly attributable to completed FEE100K requests. This materially narrows the capacity problem, but it is not yet deletion authority. The 21 unowned rows and the 36 known response-reading functions still require a rollback-safe consumer rule; no row was deleted and the existing compactor was not invoked or changed.
+
+At the same checkpoint database size was 450,620,563 bytes (~90.1% of the 500 MB allowance) and the response relation was 87,924,736 bytes. Capacity remains critical despite a small decline from the 13:58 reading. A reusable read-only census was added in [`ops/response_retention_dry_run_v1.sql`](https://github.com/arascxe/h40-graac-canary/blob/main/ops/response_retention_dry_run_v1.sql).
+
+Automatic GitHub state remained capacity-heavy: discovery run 36006820076, public propagation 36006170183 and MDRTF 35992199079 were still in progress; TikTok adapter run 36007889742 failed after ~52 minutes. No newer crypto-native run followed 35987232148, so its stale replay remains `DATA_GAP`. No exact-object candidate, pilot, verified user-wallet creator-fee receipt or revenue milestone was established.
+
+Decision: `RECLAIM_SCOPE_IDENTIFIED / DELETION_NOT_YET_SAFE / CRITICAL_CAPACITY`. No production workflow, Supabase schema/cron/threshold, immutable evidence, freeze or financial state changed.
