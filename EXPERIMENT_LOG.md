@@ -134,3 +134,15 @@ Identifiers: crypto run 35940133028; discovery run 35935251897; source main `8e1
 Log-first check found two family-lane timeouts (03:25, 03:45 UTC), so the database rule limited this session to one five-second read-only probe. That probe showed job 101 recovered with successes at 04:03 and 04:23, while compactor job 96 continued ten-minute technical successes without activating below 460 MiB. Database size increased to 439,717,011 bytes. No repeat dependency scan, EXPLAIN, compactor call, full-table count or cohort experiment was run.
 
 GitHub/source countercheck: long discovery/TikTok/propagation jobs completed, but no crypto replay run followed 00:49 UTC; the exact-object lane therefore remained stale and zero matches remained missing-coverage evidence only. Frozen primary 20 and exploratory 20 counts were unchanged. Decision remains `CRITICAL_CAPACITY / INTERMITTENT_FAMILY_TIMEOUT / CRYPTO_DATA_GAP`; do not tune scores or admit economic evidence from technical job success.
+
+## 2026-09-24 05:31–05:41 UTC — scheduled replay catch-up test
+
+**Question.** Did the next genuine scheduled crypto-native run reduce the known replay backlog enough to make exact-object absence interpretable?
+
+**Method.** Read project health and independent timeout logs before database access. Read the scheduled run, its job-step result, and the immutable published snapshot; compared the prior and current cursor timestamps without rewriting first-observed times. The bounded database checkpoint was aborted after two immediate identifier/schema rejections and was not retried a third time. No workload, score, source, cadence, schema, cron, alert or freeze was changed.
+
+**Run/test identifiers.** GitHub Actions [35960321559](https://github.com/arascxe/h40-graac-canary/actions/runs/35960321559), source main `07cebbdd44c5cc5e479fcc4aed2e223c7a2f3360`, published data commit [66b91de4358f65ccd6ce990c37aae9a2b6c3bd08](https://github.com/arascxe/h40-graac-canary/commit/66b91de4358f65ccd6ce990c37aae9a2b6c3bd08). All workflow steps and payload/privacy bounds passed technically.
+
+**Result.** Catch-up hypothesis rejected. Cursor end was 18:48:00 UTC versus snapshot generation 05:31:50 UTC, a 10h43m49s gap. Relative to the preceding 00:49 snapshot, cursor progress was only 27m06s over about 4h42m wall time. The 80,000-message cap was exhausted, `fresh_keyword_posts=0`, and retained items had zero exact outbound objects. Because `caught_up_near_live=false`, no apparent zero may enter prospective economic evidence. No candidate was eligible for manual independent pre-mint verification.
+
+**Operational result.** One new family-lane 57014 occurred at 05:25 UTC. Four long Actions workflows overlapped. Database capacity was not re-measured because the fail-fast state query did not resolve its identifiers; the prior 439,717,011-byte checkpoint remains the last verified value. Decision: `CRITICAL_CAPACITY / CRYPTO_REPLAY_DIVERGING / DATA_GAP`. No economic result or verified receipt.

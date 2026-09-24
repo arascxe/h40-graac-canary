@@ -127,3 +127,11 @@ Do not manually call or lower the threshold of `compact_ephemeral_storage()` yet
 ### 2026-09-24 04:25 UTC — unchanged safety decision
 
 Keep new ingestion and broad SQL frozen while database use is ~87.9%. Do not manually run the existing compactor: its irreversible response deletion is not yet safe for all active consumers. Continue the active-consumer census and prepare, but do not deploy, an expanded keep rule plus earlier threshold. Treat family-lane failures as intermittent and isolate their query plan only after capacity is safe. Do not repeat the frozen cohort analysis before its scheduled maturity gate.
+
+### 2026-09-24 05:41 UTC — replay divergence gate
+
+Do not treat scheduled crypto run 35960321559 as coverage recovery: it published 10h43m49s behind live time and added only 27m06s of cursor progress in roughly 4h42m. Keep exact-object crossover at `DATA_GAP`; do not repeat the same full keyword replay, raise its message budget, or count its zero links as a prospective negative while four long Actions jobs overlap.
+
+The single next safe development candidate is an offline/static guard that makes any `caught_up_near_live=false` snapshot ineligible to emit or update negative exact-match conclusions, while preserving the snapshot, cursor and gap interval for audit. Validate it against the two existing stale snapshots and a synthetic near-live control before proposing a workflow change. It must not alter first freezes, cohort membership, thresholds, source collection, alerts or production cadence; rollback is a one-commit revert.
+
+Capacity remains the prerequisite. Resume the response-consumer census only after the long jobs clear and logs no longer show repeated family-lane timeout pressure. Correct the read-only checkpoint query from repository schema definitions before the next probe; do not discover identifiers by broad catalog scans under current load. The 210-launch 24-hour gate remains 2026-09-24 22:13 UTC; do not re-run it earlier. No capital action is licensed.
