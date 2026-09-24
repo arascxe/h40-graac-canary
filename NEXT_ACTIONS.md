@@ -174,3 +174,8 @@ The fail-closed coverage guard now exists and its self-test passed independently
 Database use has crossed 90% while family-lane produced three consecutive timeouts before recovering. Treat this as an active capacity incident: do not add ingestion, integrate the coverage guard, increase replay budget, dispatch missed jobs, lower the compactor threshold or run broad/cohort SQL. The current compactor remains unsafe to accelerate until every legacy/in-flight response owner is covered by a versioned keep rule and rollback.
 
 Continue log-first passive observation. A later technical success does not clear the incident unless storage falls materially and timeout recurrence stops. Crypto-native zero remains `DATA_GAP` with an approximately 18h44m gap; discovery freshness does not substitute for exact-object coverage. Preserve primary 20, controls, exploratory 20 and frozen 210, and wait for the pre-registered 22:13 UTC maturity gate. No capital action is licensed.
+
+
+### 2026-09-24 15:25 UTC — publication incident follow-up
+
+Keep the >90% capacity hold and the response-owner safety gate from the 15:14 census. The TikTok failure in run 36007889742 is diagnosed as GitHub HTTP 500 on publishing cycle six after successful collection; inspect the next natural scheduled publication and branch timestamp before considering a bounded retry mechanism. Do not blindly rerun the failed four-hour job, treat the two hashtags as demand, or count its zero videos as absence. Discovery is independently fresh, while the crypto-native cursor remains >20 hours stale; keep exact-object zero `DATA_GAP` and do not increase replay load. Preserve all freezes and defer the frozen 210 24-hour analysis until 22:13 UTC. No financial action is licensed.
