@@ -168,3 +168,13 @@ GitHub/source countercheck: long discovery/TikTok/propagation jobs completed, bu
 **Result.** No timeout-class log appeared after 06:15 UTC. Job 101 completed five consecutive runs from 06:23 through 07:43 UTC; job 96 also continued succeeding. Database size nevertheless increased to 448,195,731 bytes (~89.6%). Discovery remained fresh at 07:49, but crypto-native coverage did not advance beyond the stale 05:31 snapshot. Technical recovery therefore does not close `CRITICAL_CAPACITY` or `CRYPTO_DATA_GAP`.
 
 **Decision/test status.** The consumer census rejects an immediate unguarded threshold reduction or manual compactor call. The next classification query was not run under near-90% storage because its legacy/in-flight ownership rules are not yet versioned; repeating counts would add little information. No economic validation, candidate or receipt.
+
+## 2026-09-24 09:45–09:46 UTC — passive scheduler/capacity checkpoint
+
+**Question.** Did completion of the long GitHub jobs restore the declared crypto schedule, and did database pressure cross either the compactor or plan-limit gate?
+
+**Method/test.** Read Supabase project health and independent timeout logs first. Because the known family-lane timeout recurred at 09:45 UTC, ran exactly one three-second-bounded read-only query limited to database size and recent job 96/101 history, then stopped database access. Read the Actions run ledger plus the immutable crypto and discovery snapshots. No cohort or exact-match database query was repeated. Source/documentation parent: `96cdbf37293bf55244fe9dc156b95503d3b05fb4`; relevant automatic run IDs: discovery 35958159932, TikTok 35959415471, propagation 35956538166, crypto 35960321559 and MDRTF 35952394065.
+
+**Result.** Database size declined to 446,712,979 bytes (~89.3%), but stayed critical. Job 101 succeeded at 08:43, 09:03 and 09:23 before one 120-second 57014 at 09:45; job 96 continued technical success without reaching its 482,344,960-byte activation threshold. Three long Actions jobs completed by 09:22, but no crypto run appeared after 05:31. The last crypto cursor remained at 18:48 UTC and was about 14h59m behind by the checkpoint. Discovery completed with a fresh 09:05 snapshot, but it supplied no eligible exact-object crossover.
+
+**Decision.** Scheduler restoration hypothesis rejected; capacity recovery remains unproven. Do not dispatch the missed job, raise replay budget, or repeat the same stale full-stream experiment. Keep zero exact matches as `DATA_GAP`. No production, freeze, threshold, alert or financial change; no pilot or verified receipt.

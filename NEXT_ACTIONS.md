@@ -151,3 +151,9 @@ Family-lane has recovered for five consecutive runs, so do not pause job 101 now
 Before any compactor or retention change, version the response ownership rule that separates referenced unprocessed FEE100K IDs, recent legacy/in-flight IDs and completed/unreferenced candidates. Dry-run only after the keep rule covers `WATCHDOG_TELEGRAM`, turnover debug, SOL-price and the four identified legacy processors. Require a post-reclaim estimate below 75%, bounded lock/rebuild time, unchanged bridge/evidence counts and a tested threshold rollback. Do not delete first freezes or durable evidence.
 
 Do not repeat primary-20, exploratory-20, exact-match or 210-launch analysis before a new checkpoint or the 22:13 UTC maturity gate. Continue passive source observation; crypto remains `DATA_GAP` and no financial action is licensed.
+
+### 2026-09-24 09:46 UTC — scheduler recovery gate
+
+The modest database-size decline does not clear `CRITICAL_CAPACITY`; keep all new ingestion, compactor and retention mutations frozen. A single family-lane timeout recurred after three successes, so continue log-first observation and do not pause job 101 without the missing versioned dependency/rollback proof.
+
+Three long Actions jobs have completed, yet the declared 15-minute crypto schedule still produced no run after 05:31 UTC. Do not manually rerun the unchanged 80,000-message replay: it is already diverging from live time. The next safe test is passive and bounded—confirm whether a genuine scheduled crypto run appears after runner capacity cleared; if it does, compare cursor progress to wall time and accept recovery only if `caught_up_near_live=true`. If it does not, inspect scheduler/run metadata once without dispatching. Preserve primary 20, controls, exploratory 20 and frozen 210; wait for the 22:13 UTC maturity gate. No capital action is licensed.
