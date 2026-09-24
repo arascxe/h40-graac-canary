@@ -186,3 +186,10 @@ Keep the >90% capacity hold and the response-owner safety gate from the 15:14 ce
 Run 36020296375 confirms that the unchanged 80,000-message full replay cannot catch live time: it gained 26m50s while 5h00m48s elapsed and published 19h46m34s behind. Do not manually rerun it, raise its message budget or use its zero exact objects as a negative. The next crypto work must change method class and first prove, in a bounded shadow, that cursor progress exceeds elapsed wall time or starts from a lawful near-live feed; until then retain `DATA_GAP`.
 
 Keep the >90% capacity hold. Do not integrate collectors, lower compactor thresholds or delete completed responses until the versioned keep rule resolves all unowned/legacy response consumers and demonstrates rollback plus a post-reclaim estimate below 75%. Continue passive observation of the next natural TikTok publication after the GitHub 500. Preserve all cohorts and wait for the frozen 210 maturity gate at 22:13 UTC. No capital action is licensed.
+
+
+### 2026-09-24 18:03 UTC — active multi-family incident hold
+
+Switch to log-only observation while startup timeouts, 57014s or connection resets remain active. Do not run more database probes in the current incident window, dispatch jobs, integrate the crypto guard, add collection, lower the compactor threshold, delete responses or evaluate cohort absence. Mark source queue, processing, freeze, outcome, discovery, exact crossover and exploration outputs from the affected interval as `DATA_GAP`.
+
+After pressure clearly subsides, the next safe test is an offline/versioned overlap analysis using the captured cron definitions and incident timestamps. It must identify the smallest noncritical derived-work family whose cadence could be reduced or paused with explicit dependency mapping, backward compatibility and one-change rollback. Do not change production until that proof exists. The frozen 210 maturity gate remains 22:13 UTC, but its analysis must also wait for healthy coverage; calendar maturity alone is insufficient. No capital action is licensed.
