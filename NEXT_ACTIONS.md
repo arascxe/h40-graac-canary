@@ -167,3 +167,10 @@ The next safe engineering candidate is an offline/static eligibility guard: snap
 ### 2026-09-24 11:17 UTC — guard verified; integration remains deferred
 
 The fail-closed coverage guard now exists and its self-test passed independently. Keep it shadow-only: do not wire it into scheduled collection, alerts or database writes while storage remains near 88.5%, family-lane timeouts are intermittent and the replay cursor is diverging. The next checkpoint is passive health observation or the frozen 210-launch maturity gate at 22:13 UTC, whichever supplies new evidence first. Do not repeat existing snapshot/cohort counts and do not treat guard PASS as economic validation.
+
+
+### 2026-09-24 13:58 UTC — hard capacity hold above 90%
+
+Database use has crossed 90% while family-lane produced three consecutive timeouts before recovering. Treat this as an active capacity incident: do not add ingestion, integrate the coverage guard, increase replay budget, dispatch missed jobs, lower the compactor threshold or run broad/cohort SQL. The current compactor remains unsafe to accelerate until every legacy/in-flight response owner is covered by a versioned keep rule and rollback.
+
+Continue log-first passive observation. A later technical success does not clear the incident unless storage falls materially and timeout recurrence stops. Crypto-native zero remains `DATA_GAP` with an approximately 18h44m gap; discovery freshness does not substitute for exact-object coverage. Preserve primary 20, controls, exploratory 20 and frozen 210, and wait for the pre-registered 22:13 UTC maturity gate. No capital action is licensed.

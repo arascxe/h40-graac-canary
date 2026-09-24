@@ -196,3 +196,14 @@ GitHub/source countercheck: long discovery/TikTok/propagation jobs completed, bu
 **This session's verification.** Read Supabase status/logs and GitHub/source state; no new timeout-class log appeared from 11:00–11:17 UTC and no new Actions or source snapshot followed run 35987232148. Did not repeat SQL or cohort analysis because the 11:07 checkpoint was unchanged. Independently executed the committed module's built-in self-test from the fetched main-branch source; exit code 0 and output `PASS: stale replay rejected; synthetic near-live control accepted`.
 
 **Result/decision.** Shadow guard PASS is independently reproduced. Existing stale snapshots remain negative-ineligible; positive exact-object candidates still require manual verification. Production integration remains deferred under `CRITICAL_CAPACITY / INTERMITTENT_FAMILY_TIMEOUT / REPLAY_DIVERGING`. No economic result, pilot or receipt.
+
+
+## 2026-09-24 13:55–13:58 UTC — 90% capacity gate / passive freshness checkpoint
+
+**Question.** Did the temporary database-size decline hold, and did either family-lane stability or crypto-native freshness recover enough to resume deferred work?
+
+**Method/test.** Read Supabase project status and independent logs first. Logs showed three consecutive family-lane SQLSTATE 57014 timeouts, so exactly one three-second-bounded read-only transaction measured only database size and recent job 96/101 history; no further SQL, EXPLAIN, cohort count or rerun was performed. Read the current Actions ledger and immutable crypto/discovery snapshots. Primary 20, matched controls, exploratory 20 and frozen 210 were not repeated. Parent/source commit before this note: `dacb9eddacc7c7f79299c7f08fe14820ffde561c`; relevant automatic runs: crypto 35987232148, discovery 36006820076, TikTok 36007889742, propagation 36006170183 and MDRTF 35992199079.
+
+**Result.** Database size rose to 450,989,203 bytes (~90.2%), 8,413,184 bytes above the 11:07 checkpoint. Job 101 failed at 12:05, 12:25 and 12:45 UTC, then succeeded at 13:03, 13:23 and 13:43; job 96 kept succeeding below its activation threshold. No new crypto run followed 35987232148, leaving its cursor at 2026-09-23 19:14:22 UTC and the effective gap near 18h44m. Discovery was current at 13:56 with 36 items/33 actor hashes, but did not supply a manually verified exact-object crossover or pilot.
+
+**Decision.** `CRITICAL_CAPACITY_GT_90 / INTERMITTENT_FAMILY_TIMEOUT / CRYPTO_DATA_GAP`. Do not integrate the coverage guard, add ingestion, rerun the replay, lower the compactor threshold or repeat frozen analyses. Technical cron successes are not economic validation. No production or financial mutation was made; no pilot or verified receipt exists.
