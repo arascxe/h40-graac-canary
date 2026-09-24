@@ -200,3 +200,10 @@ After pressure clearly subsides, the next safe test is an offline/versioned over
 Keep the log-only incident hold: startup timeouts, 57014s and connection failures were still active at 19:05 UTC. Do not query cohorts at the 22:13 maturity time merely because the clock passed; outcome validity requires healthy collection and processing coverage.
 
 The dominant timeout families are now known, but no safe pause is authorized. Before any production change, export/version the exact live definitions and dependencies for `process_cycle`, discovery bus, crypto crossover, premint refresh, turnover maintenance/outcome probe and their cron entries. Build an offline minute-overlap table and select at most one noncritical derived-work family for a reversible cadence reduction. Acceptance requires preserved source ingestion/first freezes, no new backlog growth, materially fewer timeout/connection events over a predeclared window, and a one-command rollback. Until those conditions exist, do not pause jobs, compact, delete responses, increase replay or add collectors. No capital action is licensed.
+
+
+### 2026-09-24 20:35 UTC — maintain incident hold; unchanged replay is now definitively ineligible
+
+Keep the log-only hold until a clean observation window proves startup/statement/connection errors have stopped; the latest statement timeout was 20:05 UTC. Do not query the matured 210 cohort, run a database probe, compact storage, pause a job or modify cadence while this condition holds.
+
+Do not dispatch or enlarge crypto run 36048283198: its 80,000-message pass moved only 27m13s and ended ~23h20m stale. Preserve the snapshot solely as coverage-gap evidence. The next crypto experiment must change method class and first demonstrate cursor progress greater than elapsed wall time or lawful near-live initialization in an offline/bounded shadow. Job 95 remains only a shadow load-shedding candidate; no production change is allowed until its exact live definition, durable inputs, synchronous consumers and one-command rollback are versioned after pressure clears. No capital action is licensed.
