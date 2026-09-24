@@ -269,3 +269,16 @@ A log-only 18:30–19:08 UTC hotspot analysis narrowed pg_cron 57014s to `proces
 The repository tree and code search still do not contain versioned definitions/dependency maps for these live cron functions, beyond the limited staged ops scripts. Therefore no individual job can yet be paused with demonstrated backward compatibility and one-change rollback. Automatic GitHub activity, separate from this session: propagation run 36006170183 completed successfully at 18:13 UTC; MDRTF run 36029144279 remained in progress. No new crypto or TikTok snapshot appeared; discovery remained last generated 17:40 UTC. Technical workflow success does not restore database or source coverage.
 
 All freeze, outcome, discovery, crossover and exploration observations in the incident window remain `DATA_GAP`. Primary 20, matched controls, separate exploratory 20 and frozen 210 were not queried or changed. No manually verified exact-object pilot or user-wallet creator-fee receipt emerged. This session changed documentation only; no production, schema, cron, alert, threshold, retention, freeze or financial state changed.
+
+
+### 2026-09-24 19:07 UTC — incident persists for 87 minutes; first shadow load-shedding candidate isolated
+
+Supabase still reported project-level `ACTIVE_HEALTHY`, but independent logs proved the broad incident was continuing through 19:06 UTC. Because startup, statement and connection failures were active, this session remained log-only and ran no database SQL, cohort query, EXPLAIN, rerun or mutation.
+
+Across 17:40–19:07 UTC, the log plane recorded 103 statement timeouts across 56 distinct minutes, 73 connection/SSL errors across 32 minutes, and 326 cron startup timeouts across 15 job IDs. Highest startup failure counts were job 94 fast freeze (60), job 81 source queue (47), job 98 discovery processing (43), job 95 turnover outcome probe (35) and job 100 discovery adapter bus (27). This rejects any interpretation of the earlier quiet window as recovery. The incident now spans raw intake, processing, first-freeze chronology, evidence, outcomes and crossover; all absence observations in the affected interval remain `DATA_GAP`.
+
+An offline dependency/risk ranking selected only `job 95 / turnover outcome probe` as the first shadow load-shedding candidate. It is downstream and plausibly backfillable, while the three more frequently failing jobs are chronology or raw-coverage critical. This is not production authorization: the exact job 95 schedule/command/active flag, durable inputs, synchronous consumers and rollback SQL must be captured after the incident clears. No cron was paused or changed. The versioned analysis is [`ops/INCIDENT_OVERLAP_2026-09-24.md`](https://github.com/arascxe/h40-graac-canary/blob/main/ops/INCIDENT_OVERLAP_2026-09-24.md).
+
+Database size was not re-queried under active pressure; the last verified 18:03 value remains 452,865,171 bytes (~90.57%), not a new observation. Primary 20, controls, exploratory 20 and frozen 210 were not queried or edited. Calendar maturity alone does not license outcome analysis during a coverage incident. No exact-object candidate, pilot, verified user-wallet receipt or revenue milestone was established.
+
+Decision: `PERSISTENT_MULTI_FAMILY_DB_INCIDENT / SHADOW_LOAD_SHED_CANDIDATE_JOB95 / NO_PRODUCTION_CHANGE`.
