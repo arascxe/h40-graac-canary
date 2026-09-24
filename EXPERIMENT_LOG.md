@@ -254,3 +254,14 @@ GitHub/source countercheck: long discovery/TikTok/propagation jobs completed, bu
 **Result/test.** Project health was `ACTIVE_HEALTHY`, but log-plane falsification failed recovery: 208 timeout mentions occurred after 19:05 and the last statement timeout was 20:05:00 UTC. From 19:35 onward, 18 statement-timeout cancellations and repeated startup failures affected multiple job IDs. Crypto run 36048283198 passed its workflow/self-tests and consumed 80,000 messages, yet its cursor advanced only 27m13s (2026-09-23 19:41:00→20:08:13 UTC) and was ~23h19m49s stale at publication. It reported `caught_up_near_live=false`, zero fresh keyword posts and partial/unknown coverage. This is a technical PASS but a freshness FAIL.
 
 **Decision.** Reject the unchanged replay as prospective evidence and retain all zero exact-object output as `DATA_GAP`. Continue `ACTIVE_MULTI_FAMILY_DB_INCIDENT / NO_SAFE_SQL / NO_PRODUCTION_MUTATION`. The single safe candidate remains offline/versioned dependency and rollback proof for job 95 after a clean log window. No pilot, wallet receipt or economic validation.
+
+
+## 2026-09-24 21:48 UTC — recovery gate probe and job-95 rollback baseline
+
+**Hypothesis.** Timeout pressure may have subsided enough for one bounded read-only probe, and the selected downstream outcome job may have a capturable baseline sufficient to advance—but not yet authorize—the load-shedding experiment.
+
+**Method.** First query only the independent Supabase log plane for 20:35–21:48 UTC. After zero startup, statement and connection errors, run one exact-row SQL probe for database size and cron job 95's schedule, active flag and command. Perform default-branch static searches for the function, job declaration and schedule. Do not query cohorts, outcomes, freezes, receipts or broad catalogs; do not rerun or mutate a job. Automatic GitHub states observed separately: runs 36051648754, 36052052398 and 36052572065 in progress; 36060305687 pending.
+
+**Result/test.** The 73-minute log window was clean. Database size was 461,270,163 bytes (~92.25%), an 8,404,992-byte increase from the prior verified 452,865,171-byte checkpoint. Job 95 was `active=true`, scheduled every `59 seconds`, command `select fee100k_private.turnover_outcome_probe_tick();`. Repository search found no versioned definition or schedule, so dependency/backfill/rollback closure failed. The point-in-time gate is commit `0f1c4ff`; state/action commits are `2f503f5` and `2637378`.
+
+**Decision.** Probe PASS; production-change admission FAIL. Preserve job 95 unchanged. Remain `CRITICAL_CAPACITY / SHADOW_CANDIDATE_ONLY`; require a narrow function/dependency export after another clean window before any cadence change. No pilot, verified receipt or economic validation.
