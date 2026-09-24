@@ -146,3 +146,15 @@ GitHub/source countercheck: long discovery/TikTok/propagation jobs completed, bu
 **Result.** Catch-up hypothesis rejected. Cursor end was 18:48:00 UTC versus snapshot generation 05:31:50 UTC, a 10h43m49s gap. Relative to the preceding 00:49 snapshot, cursor progress was only 27m06s over about 4h42m wall time. The 80,000-message cap was exhausted, `fresh_keyword_posts=0`, and retained items had zero exact outbound objects. Because `caught_up_near_live=false`, no apparent zero may enter prospective economic evidence. No candidate was eligible for manual independent pre-mint verification.
 
 **Operational result.** One new family-lane 57014 occurred at 05:25 UTC. Four long Actions workflows overlapped. Database capacity was not re-measured because the fail-fast state query did not resolve its identifiers; the prior 439,717,011-byte checkpoint remains the last verified value. Decision: `CRITICAL_CAPACITY / CRYPTO_REPLAY_DIVERGING / DATA_GAP`. No economic result or verified receipt.
+
+## 2026-09-24 06:19–06:20 UTC — fail-fast capacity and pause-safety checkpoint
+
+**Question.** Has the capacity incident crossed into active repeated job failure, and can the failing family-lane job be safely paused from versioned evidence alone?
+
+**Method.** Read project status and independent 05:15–06:20 UTC timeout logs first. Because multiple recent timeouts were active, ran exactly one three-second-bounded read-only query containing only database size and recent job 96/101 history. Then stopped database access and searched the repository statically for the job/function definition. No cohort query, relation scan, EXPLAIN, rerun or mutation.
+
+**Results.** Database size was 446,123,155 bytes (~89.2%). Job 101 failed at 05:25, 05:45 and 06:05 UTC; job 96 succeeded every ten minutes but did not trigger reclaim below 460 MiB. The repository contained state references but no versioned definition sufficient to prove job 101 ownership, downstream dependency or rollback. Therefore the pause-safety hypothesis is unresolved and no cron intervention was made. This diagnoses the prior failure pattern rather than repeating the replay or cohort experiments.
+
+**Independent source check.** Discovery run 35958159932 remained fresh at cycle 51, while crypto run 35960321559 remained the newest crypto snapshot and stayed `DATA_GAP`. Four long Actions jobs still overlapped. No exact-object candidate entered manual adjudication.
+
+**Decision.** `CRITICAL_CAPACITY / ACTIVE_FAMILY_TIMEOUT / NO_SAFE_MUTATION_PROVEN`. Freeze new workload and preserve evidence. No pilot, fee receipt or economic validation.

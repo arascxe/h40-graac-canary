@@ -135,3 +135,11 @@ Do not treat scheduled crypto run 35960321559 as coverage recovery: it published
 The single next safe development candidate is an offline/static guard that makes any `caught_up_near_live=false` snapshot ineligible to emit or update negative exact-match conclusions, while preserving the snapshot, cursor and gap interval for audit. Validate it against the two existing stale snapshots and a synthetic near-live control before proposing a workflow change. It must not alter first freezes, cohort membership, thresholds, source collection, alerts or production cadence; rollback is a one-commit revert.
 
 Capacity remains the prerequisite. Resume the response-consumer census only after the long jobs clear and logs no longer show repeated family-lane timeout pressure. Correct the read-only checkpoint query from repository schema definitions before the next probe; do not discover identifiers by broad catalog scans under current load. The 210-launch 24-hour gate remains 2026-09-24 22:13 UTC; do not re-run it earlier. No capital action is licensed.
+
+### 2026-09-24 06:20 UTC — active incident gate
+
+Treat the three consecutive family-lane timeouts and 89.2% database use as an active capacity incident. Add no ingestion, replay budget, cadence, table, broad query or cohort refresh. Do not manually invoke the compactor or lower its threshold while legacy response consumers remain unmapped.
+
+Do not pause job 101 solely from its failures: the repository does not contain a sufficient versioned definition/dependency map to prove that a pause is backward-compatible. The single next safe test remains a read-only ownership/consumer census after timeout pressure eases, limited to the function/job definitions and pending response IDs required to specify an expanded keep rule and a reversible pause/threshold plan. Acceptance requires zero at-risk consumer responses, bounded lock/rebuild time and unchanged evidence/bridge counts.
+
+Continue passive GitHub/source observation only. Crypto exact-match zero remains `DATA_GAP`; discovery freshness does not substitute for it. Preserve all frozen cohorts and wait for the 210-launch maturity gate at 22:13 UTC.
