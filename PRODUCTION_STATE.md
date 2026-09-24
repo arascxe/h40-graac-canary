@@ -282,3 +282,12 @@ An offline dependency/risk ranking selected only `job 95 / turnover outcome prob
 Database size was not re-queried under active pressure; the last verified 18:03 value remains 452,865,171 bytes (~90.57%), not a new observation. Primary 20, controls, exploratory 20 and frozen 210 were not queried or edited. Calendar maturity alone does not license outcome analysis during a coverage incident. No exact-object candidate, pilot, verified user-wallet receipt or revenue milestone was established.
 
 Decision: `PERSISTENT_MULTI_FAMILY_DB_INCIDENT / SHADOW_LOAD_SHED_CANDIDATE_JOB95 / NO_PRODUCTION_CHANGE`.
+
+
+### 2026-09-24 20:35 UTC — timeout incident extends; crypto replay falls further behind
+
+This session used the separate Supabase log plane first and sent no PostgreSQL SQL because multi-family timeout pressure remained active. From 19:05 through 20:05 UTC, logs contained 208 timeout mentions; the last observed statement timeout was at 20:05:00 UTC. In the narrower 19:35–20:05 interval there were 18 statement-timeout cancellations plus repeated startup timeouts led by job 94 (11), with jobs 81, 98, 95, 103, 100, 82, 97, 87, 106, 96 and 88 also affected. Project-level status remained `ACTIVE_HEALTHY`, which does not clear job-level failure.
+
+Automatic production activity, separate from this session: crypto run [36048283198](https://github.com/arascxe/h40-graac-canary/actions/runs/36048283198) completed technically at 19:28 UTC. It processed the full 80,000-message cap but advanced its Jetstream cursor only from 2026-09-23 19:41:00 to 20:08:13 UTC (27m13s). At publication the cursor was approximately 23h19m49s behind live time; `caught_up_near_live=false`, `fresh_keyword_posts=0`, and coverage remained `PARTIAL_OR_BASELINE_UNKNOWN`. Reddit stayed approval-blocked and Bluesky search stayed disabled after 403. Therefore no exact-object absence from this run is an economic negative. Three later natural Actions runs—propagation 36051648754, adapter bus 36052052398 and TikTok 36052572065—were still in progress at observation time and are not evidence of restored coverage.
+
+No cohort, freeze, matched control, exploration row, database size or creator-fee receipt was queried or changed. The last verified database size remains 452,865,171 bytes (~90.57%). No production job, cron, schema, retention rule, alert route, threshold or financial state changed. Decision: `ACTIVE_MULTI_FAMILY_DB_INCIDENT / CRYPTO_DATA_GAP_23H20M / NO_PRODUCTION_CHANGE`.
