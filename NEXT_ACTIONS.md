@@ -163,3 +163,7 @@ Three long Actions jobs have completed, yet the declared 15-minute crypto schedu
 Scheduled run 35987232148 closes the scheduler-liveness question but fails the catch-up gate: cursor lag grew to 15h12m36s. Do not manually dispatch, increase the 80,000-message budget, or treat zero exact objects as a negative result. Freeze further full-stream replay experiments until method class changes.
 
 The next safe engineering candidate is an offline/static eligibility guard: snapshots with `caught_up_near_live=false` must be preserved with their cursor/gap metadata but must be incapable of emitting or updating negative exact-match conclusions. Test only against the existing stale snapshots plus a synthetic near-live control; avoid a production-code push while database pressure remains ~88.5% and family-lane timeouts are intermittent. Preserve all frozen cohorts and wait for the 22:13 UTC 210-launch maturity gate. No capital action is licensed.
+
+### 2026-09-24 11:17 UTC — guard verified; integration remains deferred
+
+The fail-closed coverage guard now exists and its self-test passed independently. Keep it shadow-only: do not wire it into scheduled collection, alerts or database writes while storage remains near 88.5%, family-lane timeouts are intermittent and the replay cursor is diverging. The next checkpoint is passive health observation or the frozen 210-launch maturity gate at 22:13 UTC, whichever supplies new evidence first. Do not repeat existing snapshot/cohort counts and do not treat guard PASS as economic validation.
