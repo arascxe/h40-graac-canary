@@ -179,3 +179,10 @@ Continue log-first passive observation. A later technical success does not clear
 ### 2026-09-24 15:25 UTC — publication incident follow-up
 
 Keep the >90% capacity hold and the response-owner safety gate from the 15:14 census. The TikTok failure in run 36007889742 is diagnosed as GitHub HTTP 500 on publishing cycle six after successful collection; inspect the next natural scheduled publication and branch timestamp before considering a bounded retry mechanism. Do not blindly rerun the failed four-hour job, treat the two hashtags as demand, or count its zero videos as absence. Discovery is independently fresh, while the crypto-native cursor remains >20 hours stale; keep exact-object zero `DATA_GAP` and do not increase replay load. Preserve all freezes and defer the frozen 210 24-hour analysis until 22:13 UTC. No financial action is licensed.
+
+
+### 2026-09-24 16:28 UTC — stop unchanged replay class
+
+Run 36020296375 confirms that the unchanged 80,000-message full replay cannot catch live time: it gained 26m50s while 5h00m48s elapsed and published 19h46m34s behind. Do not manually rerun it, raise its message budget or use its zero exact objects as a negative. The next crypto work must change method class and first prove, in a bounded shadow, that cursor progress exceeds elapsed wall time or starts from a lawful near-live feed; until then retain `DATA_GAP`.
+
+Keep the >90% capacity hold. Do not integrate collectors, lower compactor thresholds or delete completed responses until the versioned keep rule resolves all unowned/legacy response consumers and demonstrates rollback plus a post-reclaim estimate below 75%. Continue passive observation of the next natural TikTok publication after the GitHub 500. Preserve all cohorts and wait for the frozen 210 maturity gate at 22:13 UTC. No capital action is licensed.
