@@ -207,3 +207,10 @@ The dominant timeout families are now known, but no safe pause is authorized. Be
 Keep the log-only hold until a clean observation window proves startup/statement/connection errors have stopped; the latest statement timeout was 20:05 UTC. Do not query the matured 210 cohort, run a database probe, compact storage, pause a job or modify cadence while this condition holds.
 
 Do not dispatch or enlarge crypto run 36048283198: its 80,000-message pass moved only 27m13s and ended ~23h20m stale. Preserve the snapshot solely as coverage-gap evidence. The next crypto experiment must change method class and first demonstrate cursor progress greater than elapsed wall time or lawful near-live initialization in an offline/bounded shadow. Job 95 remains only a shadow load-shedding candidate; no production change is allowed until its exact live definition, durable inputs, synchronous consumers and one-command rollback are versioned after pressure clears. No capital action is licensed.
+
+
+### 2026-09-24 21:48 UTC — capacity remains the stop gate
+
+Do not treat the clean 73-minute log window as recovery while database use is ~92.25% and three long Actions jobs remain in progress. Add no collector, replay, cadence, schema, compaction or retention mutation. Keep the matured 210 analysis deferred until both database processing and relevant source coverage are demonstrably healthy.
+
+Job 95's exact current schedule, command and active state are now captured at commit `0f1c4ff`, but a pause/cadence change is still forbidden. The next safe step is a narrowly scoped function/dependency export after another clean window, proving durable inputs, deterministic backfill, no synchronous freeze/alert/receipt consumers and exact restoration of the captured state. If that evidence cannot be produced without broad catalog load, remain passive. No financial action is licensed.
