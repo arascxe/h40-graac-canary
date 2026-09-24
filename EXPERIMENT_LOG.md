@@ -243,3 +243,14 @@ GitHub/source countercheck: long discovery/TikTok/propagation jobs completed, bu
 **Result/test.** Rolling logs through 19:05 UTC showed 283 startup timeouts, 92 SQLSTATE 57014s and 43 connection errors. In 18:30–19:08, pg_cron 57014 counts were process cycle 16, discovery bus 10, crypto crossover 5, premint refresh 3, turnover maintenance 3, outcome probe 2 and retention 1. Logged contexts expose concurrent full/range scans, inserts/deletes and shared response-table updates, not a single proven culprit. Repository search returned no versioned live definitions sufficient to prove a safe pause, dependency closure or rollback.
 
 **Decision.** Hotspot isolation passes, but production load-shedding admission fails for missing versioned definitions. Remain `ACTIVE_MULTI_FAMILY_DB_INCIDENT / DATA_GAP / NO_SAFE_MUTATION`. The next test is offline definition export plus minute-overlap/dependency analysis after pressure subsides. Calendar maturity alone does not validate the frozen 210 outcomes. No pilot or verified receipt.
+
+
+## 2026-09-24 20:35 UTC — fail-fast incident extension and crypto freshness falsification
+
+**Hypothesis.** The prior multi-family database incident may have subsided after 19:07 UTC, and the next natural crypto run may show effective catch-up despite earlier replay divergence.
+
+**Method.** Read Supabase project health and the independent log plane for 19:05–20:35 UTC before any database access. Because active timeout evidence was present, execute zero PostgreSQL SQL, EXPLAIN, cohort query or job rerun. Inspect natural GitHub Actions since 19:05, then read the completed crypto job log for run [36048283198](https://github.com/arascxe/h40-graac-canary/actions/runs/36048283198). Frozen thresholds, primary 20, matched controls, exploration cohort and frozen 210 were not opened or changed. State/action commits: `4b3880b3`, `ca34241c`.
+
+**Result/test.** Project health was `ACTIVE_HEALTHY`, but log-plane falsification failed recovery: 208 timeout mentions occurred after 19:05 and the last statement timeout was 20:05:00 UTC. From 19:35 onward, 18 statement-timeout cancellations and repeated startup failures affected multiple job IDs. Crypto run 36048283198 passed its workflow/self-tests and consumed 80,000 messages, yet its cursor advanced only 27m13s (2026-09-23 19:41:00→20:08:13 UTC) and was ~23h19m49s stale at publication. It reported `caught_up_near_live=false`, zero fresh keyword posts and partial/unknown coverage. This is a technical PASS but a freshness FAIL.
+
+**Decision.** Reject the unchanged replay as prospective evidence and retain all zero exact-object output as `DATA_GAP`. Continue `ACTIVE_MULTI_FAMILY_DB_INCIDENT / NO_SAFE_SQL / NO_PRODUCTION_MUTATION`. The single safe candidate remains offline/versioned dependency and rollback proof for job 95 after a clean log window. No pilot, wallet receipt or economic validation.
