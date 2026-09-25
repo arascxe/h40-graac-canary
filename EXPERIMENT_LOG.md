@@ -287,3 +287,27 @@ GitHub/source countercheck: long discovery/TikTok/propagation jobs completed, bu
 **Result/test.** Recovery hypothesis failed: five statement timeouts occurred 00:44–01:05 UTC plus one connection reset. Crypto workflow tests passed, but 80,000 messages advanced the cursor only ~26m21s to 2026-09-23 21:01:55 UTC; publication lag was ~27h52m43s. It reported `caught_up_near_live=false`, zero fresh keyword posts and partial/unknown coverage. No exact-object absence is admissible. State/action commits: `a72f1dd`, `aa65f08`.
 
 **Decision.** `RECOVERY_REJECTED / DATA_GAP / NO_SAFE_SQL`. Do not repeat or enlarge the unchanged replay. Freeze/cohort state and economic conclusions remain unchanged; no pilot or verified receipt.
+
+
+### 2026-09-25 02:56 UTC — fail-fast capacity probe at imminent compactor threshold
+
+**Method**
+- Read Supabase project state and the separate log plane before touching the database.
+- Reviewed 01:31–02:56 UTC for cron-startup timeouts, `57014`/statement timeouts, and connection errors.
+- Because the window contained only one statement timeout (02:45 UTC) and no active multi-timeout pattern, executed exactly one bounded read-only probe: `select pg_database_size(current_database()) as database_bytes;`.
+- Reviewed natural GitHub workflow state without dispatching or rerunning jobs.
+
+**Result**
+- Database size: **478,702,739 bytes** = **95.74%** of the 500,000,000-byte free allowance.
+- Increase from the prior verified 419,335,315-byte checkpoint: **59,367,424 bytes**.
+- Remaining free headroom: **21,297,261 bytes**.
+- Distance to the already-existing 460 MiB automatic compactor trigger (482,344,960 bytes): **3,642,221 bytes (~3.47 MiB)**.
+- Propagation `36071394891`, adapter-bus `36071756803`, and TikTok `36072567786` were still in progress. No new completed source snapshot or valid exact-object crossover evidence appeared.
+- Primary/cohort freezes were not queried or mutated. No pilot candidate, user-wallet creator-fee receipt, or economic validation was produced.
+
+**Safety / test**
+- PASS: fail-fast ordering honored.
+- PASS: exactly one small read-only SQL statement; no EXPLAIN, full-table count, cohort scan, job rerun, or mutation.
+- PASS: production jobs, cron, schema, compactor threshold, alert routing, and financial state unchanged.
+- HOLD: manual compaction and threshold changes remain blocked until shared HTTP-response consumers and rollback safety are proven.
+- Durable state commits: `f4f7f3d4f7b9252c5d790f3af5ffb071a6a9e058` and `32a036cef7d2964c23789eb7053ca26c034ab14d`.
