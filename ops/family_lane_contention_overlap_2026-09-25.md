@@ -36,3 +36,14 @@ Across 08:42–09:22 UTC, `turnover_research_maintenance()` completion durations
 `PERIODIC_FAMILY_LANE_FAILURE_RECURRED / SHARED_CONTENTION_SUPPORTED_NOT_PROVEN / SOURCE_WINDOWS_COMPLETE_PARTIAL_ACCESS / CRYPTO_DATA_GAP / NO_PRODUCTION_CHANGE`.
 
 Current database size was deliberately not queried because multiple live timeouts were present. The last verified checkpoint remains 412,036,243 bytes at 08:19 UTC. No pilot, user-wallet creator-fee receipt, or revenue milestone is established.
+
+
+## 10:27 UTC counterexample update
+
+A fourth failure occurred at 09:45 UTC after the 09:43 start. The same unchanged function then completed naturally at 10:03:08 and 10:23:08 UTC in about 8.6s and 7.9s.
+
+Outcome-probe ShareLock waits on `fee100k_http_request_v1` continued at 09:50, 09:56, 10:02, 10:14, 10:20 and 10:26 UTC. Retention also logged a ShareLock wait on `fee100k_remix_family_snapshot_v1` at 10:07 UTC. The 10:03 family-lane success immediately followed a logged outcome-probe wait at 10:02; the 10:23 success occurred while the broader periodic wait pattern remained present.
+
+This counterexample rejects `OUTCOME_PROBE_HTTP_ROW_LOCK_WAIT_IS_SUFFICIENT_DISCRIMINATOR`. Shared load/contention remains plausible at a broader resource level, but these row-lock messages alone do not separate family-lane success from failure. The next admissible diagnostic must distinguish query-input/resource state at family-lane start, not merely the presence of unrelated row-lock waits.
+
+The workflow still declares a 15-minute crypto schedule (`7,22,37,52 * * * *`), but no run appeared after 36101180099 at 06:03 UTC through 10:27 UTC. MDRTF run 36092388913 remained in `Collect 208 prospective cuts`, with no new Actions run created after 06:03 UTC. This is an effective scheduling/freshness gap; it is not an economic negative.
