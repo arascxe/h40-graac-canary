@@ -408,3 +408,24 @@ Source activity remained split. Discovery published cycle 127 at **08:19:02 UTC*
 The primary 20, matched controls, exploration cohort and frozen 210 were not queried or changed. No verified independent pre-mint crossover, admitted pilot, user-wallet creator-fee receipt or revenue milestone appeared.
 
 This session performed log-first inspection, exactly one bounded read-only size/job-status probe, source verification and documentation. No EXPLAIN, equivalence scan, cohort query, rerun, production function, cron, schema, compactor, threshold, routing, freeze or financial change. Decision: `JOB101_THREE_NATURAL_SUCCESSES / QUERY_SHAPE_NOT_SOLE_CAUSE / CAPACITY_REGROWTH_82_41_PERCENT / CRYPTO_DATA_GAP / PILOT_READY_FALSE`.
+
+
+## 2026-09-25 09:37 UTC — periodic family-lane failures return; contention evidence strengthens
+
+Automatic production activity: after three unchanged natural successes at 07:23, 07:43 and 08:03 UTC, job 101 returned to SQLSTATE `57014` failures at **08:45, 09:05 and 09:25 UTC**. Every new failure again names `select fee100k_private.refresh_family_lane_guarded();` and the existing wide `refresh_family_lane()` aggregation/upsert. Project status remained `ACTIVE_HEALTHY`, which does not override the job-level incident.
+
+The independent log plane shows other work becoming slower in the same phase: `turnover_research_maintenance()` executions ranged up to about **42.9 seconds**, while separate `turnover_outcome_probe_tick()` executions waited for ShareLock acquisition for about **4.3–9.8 seconds**. Premint refresh/evidence and `process_cycle` also occupied overlapping intervals. This supports shared database workload/contention as part of the intermittent mechanism, but does not prove a single blocking statement, lock chain, cache cause, or job as the root cause. Long GitHub workflows overlapped both earlier successes and current failures, so their mere overlap is not discriminating evidence. The versioned reconstruction is in [`ops/family_lane_contention_overlap_2026-09-25.md`](https://github.com/arascxe/h40-graac-canary/blob/main/ops/family_lane_contention_overlap_2026-09-25.md).
+
+Completed automatic source activity remained mixed:
+
+- Discovery adapter run [36097104891](https://github.com/arascxe/h40-graac-canary/actions/runs/36097104891) finished 160 cycles and published at 09:09 UTC with 40 items, 32 independent actors, 38 platform links and 10 creative-evidence items.
+- Propagation run [36095967968](https://github.com/arascxe/h40-graac-canary/actions/runs/36095967968) finished 180 cycles and published at 09:29 UTC with 91 items, 71 independent actors and 83 links.
+- TikTok run [36098133354](https://github.com/arascxe/h40-graac-canary/actions/runs/36098133354) finished 24 cycles, but every cycle remained at two hashtags and **zero videos**. Direct TikTok Creative Center calls in adapter logs continued to return code `40101`.
+- Reddit RSS produced intermittent HTTP 429 responses for some communities while other feeds returned items. This is partial access degradation, not a universal Reddit outage.
+- MDRTF run 36092388913 remained in progress. Job start or technical PASS is not economic validation.
+
+Crypto-native run [36101180099](https://github.com/arascxe/h40-graac-canary/actions/runs/36101180099) remains the newest snapshot. Its cursor ended at 2026-09-23 21:30:47.437 UTC and was already about 32h33m stale at publication. No near-live exact-object observation exists; zero matches remain `DATA_GAP`.
+
+This Work session followed the fail-fast rule: after finding multiple active timeouts, it sent **zero PostgreSQL SQL**, no EXPLAIN, no cohort/freeze query and no rerun. Current capacity was therefore not remeasured; the last verified checkpoint remains **412,036,243 bytes (82.41%) at 08:19 UTC**. The primary 20, matched controls, separate exploration cohort and frozen 210 remained untouched. No production function, cron, schema, compactor, threshold, routing or financial state changed.
+
+Decision: `PERIODIC_FAMILY_LANE_FAILURE_RECURRED / SHARED_CONTENTION_SUPPORTED_NOT_PROVEN / SOURCE_WINDOWS_COMPLETE_PARTIAL_ACCESS / CRYPTO_DATA_GAP / PILOT_READY_FALSE`. No verified independent pre-mint pilot, user-wallet creator-fee receipt or revenue milestone exists.
