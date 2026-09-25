@@ -258,3 +258,13 @@ Do not run the unchanged crypto replay again or increase its 80,000-message budg
 4. Crypto-native exact-object coverage remains stale and ineligible; do not repeat the rejected unchanged replay or count zero matches as negatives.
 5. Preserve primary 20, matched controls, exploration cohort, and frozen 210. Reopen prospective outcome analysis only after database stability and relevant source coverage are jointly verified.
 6. No mint, wallet signature, transfer, trade, paid service, or other financial action is authorized.
+
+
+## 2026-09-25 06:45 UTC — next safe gate after post-compaction recurrence
+
+- Treat the 06:25 and 06:45 UTC failures as an active family-lane incident. Do not run the 210-launch outcome scan, cohort refresh, EXPLAIN, full counts, or manual job retries until a later independent-log window is clean.
+- Do not blame or manually rerun job 96: the logged failing statement is `refresh_family_lane_guarded()`; automatic compaction only overlapped in time and had already reclaimed capacity successfully.
+- Highest-information safe development is an **offline, versioned shadow rewrite plan** for `refresh_family_lane()`: preserve identical output semantics and evidence timestamps, bound source ranges or stage latest-economic rows incrementally, document every consumer, and provide a one-command rollback to the captured live definition. Validate on fixtures or an isolated branch first; do not deploy or EXPLAIN against production during active timeouts.
+- Recheck capacity only after a clean log gate. Current point-in-time size is 384,642,195 bytes (76.93%), already +20,406,272 bytes since the 05:25 reclaim; measure whether this growth rate persists before changing retention or the compactor threshold.
+- Keep the unchanged 80,000-message crypto replay method rejected. Run 36101180099 remained ~32h33m stale and produced no fresh keyword posts; all zero exact-object output remains `DATA_GAP`.
+- Wait for propagation, adapter-bus, TikTok and MDRTF to finish naturally; do not count starts or technical PASS as restored end-to-end coverage. Preserve the primary 20, controls, exploratory cohort and 210 freeze unchanged.
