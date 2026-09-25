@@ -221,3 +221,10 @@ Job 95's exact current schedule, command and active state are now captured at co
 Do not pause or slow job 95. Its live wrapper couples canonical outcomes, economic outcomes, probe queueing and turnover model-state refresh; repository definitions for the four children remain incomplete. A pause is not a narrow load-shed and could suppress mature economic evidence. Preserve its 59-second baseline and require full written-table/consumer/backfill closure before reconsideration.
 
 Treat the decline to 419,335,315 bytes (~83.87%) as provisional recovery only; the cause is unproven and storage remains high. Continue passive capacity/log monitoring and do not lower compactor thresholds, delete responses or add ingestion. Do not repeat the unchanged crypto replay: run 36068795919 ended ~26h06m stale and is coverage-ineligible. Three replacement propagation/adapter/TikTok runs are in progress and MDRTF is active; wait for completed snapshots rather than interpreting starts as recovery. Primary 20, controls, exploration 20 and frozen 210 remain closed until healthy end-to-end coverage. No capital action is licensed.
+
+
+### 2026-09-25 01:31 UTC — recovery claim withdrawn
+
+Withdraw any recovery inference from the earlier quiet window: statement timeouts recurred through 01:05 UTC. Return to log-first observation and send no PostgreSQL probe while recurrence is active. Do not open the matured 210 cohort merely because its clock gate passed; relevant processing and source coverage remain unhealthy.
+
+Do not run the unchanged crypto replay again or increase its 80,000-message budget. Run 36079643535 moved ~26m21s while the wall clock advanced more than two hours and ended ~27h53m stale. The next admissible crypto work must change method class and prove near-live initialization or cursor progress faster than wall time in a bounded offline shadow. Continue waiting for completed propagation, adapter and TikTok snapshots; starts/in-progress states are not coverage recovery. Job 95 remains unchanged and its pause remains rejected. No capital action is licensed.
