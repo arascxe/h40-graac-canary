@@ -429,3 +429,18 @@ Crypto-native run [36101180099](https://github.com/arascxe/h40-graac-canary/acti
 This Work session followed the fail-fast rule: after finding multiple active timeouts, it sent **zero PostgreSQL SQL**, no EXPLAIN, no cohort/freeze query and no rerun. Current capacity was therefore not remeasured; the last verified checkpoint remains **412,036,243 bytes (82.41%) at 08:19 UTC**. The primary 20, matched controls, separate exploration cohort and frozen 210 remained untouched. No production function, cron, schema, compactor, threshold, routing or financial state changed.
 
 Decision: `PERIODIC_FAMILY_LANE_FAILURE_RECURRED / SHARED_CONTENTION_SUPPORTED_NOT_PROVEN / SOURCE_WINDOWS_COMPLETE_PARTIAL_ACCESS / CRYPTO_DATA_GAP / PILOT_READY_FALSE`. No verified independent pre-mint pilot, user-wallet creator-fee receipt or revenue milestone exists.
+
+
+## 2026-09-25 10:27 UTC — row-lock marker rejected; crypto scheduler gap exceeds four hours
+
+Automatic production activity: job 101 timed out again at **09:45 UTC** after its 09:43 start, producing the same SQLSTATE `57014` inside `refresh_family_lane_guarded()` / `refresh_family_lane()`. Without any deployment or cadence change, the next two executions completed naturally at **10:03:08** and **10:23:08 UTC** in approximately 8.6 and 7.9 seconds.
+
+The independent log plane continued to show ShareLock waits from `turnover_outcome_probe_tick()` on `fee100k_http_request_v1` at 09:50, 09:56, 10:02, 10:14, 10:20 and 10:26 UTC; retention also waited on `fee100k_remix_family_snapshot_v1` at 10:07. Because the 10:03 family-lane success immediately followed a 10:02 outcome-probe lock wait and the 10:23 success occurred during the same wider wait pattern, `OUTCOME_PROBE_HTTP_ROW_LOCK_WAIT_IS_SUFFICIENT_DISCRIMINATOR` is rejected. Broader workload/resource contention remains plausible, but these row-lock messages alone do not predict family-lane failure. The versioned overlap report was updated in commit `eebd0a1dc9b67574b2a1f4edd8f1c5b7aafa3044`.
+
+GitHub Actions also shows a material coverage gap. The crypto workflow still declares a 15-minute schedule (`7,22,37,52 * * * *`), but no crypto run appeared after [36101180099](https://github.com/arascxe/h40-graac-canary/actions/runs/36101180099) at 06:03 UTC through 10:27 UTC. Its latest snapshot remains generated at 06:04 UTC with a cursor ending 2026-09-23 21:30:47.437 UTC and `caught_up_near_live=false`. Zero exact-object output remains `DATA_GAP`.
+
+No new GitHub Actions run of any family appeared after 06:03 UTC. MDRTF run [36092388913](https://github.com/arascxe/h40-graac-canary/actions/runs/36092388913) remained `in_progress` in `Collect 208 prospective cuts`; previous adapter, TikTok and propagation windows had completed. This supports an effective Actions scheduling/capacity issue, but does not prove that MDRTF is the sole cause or authorize cancellation.
+
+This Work session sent **zero PostgreSQL SQL** because the prior multi-timeout incident produced another failure within the observation window. Current database capacity, primary 20 outcomes, matched controls, exploration cohort and frozen 210 were not re-queried; the last verified capacity remains 412,036,243 bytes at 08:19 UTC. No source record was promoted, and no production job, workflow, cron, schema, threshold, freeze, alert or financial state changed.
+
+Decision: `FAMILY_LANE_INTERMITTENT_FAILURE / HTTP_ROW_LOCK_MARKER_REJECTED / CRYPTO_SCHEDULE_GAP_GT_4H / DATA_GAP / PILOT_READY_FALSE`. No verified independent pre-mint pilot, creator-fee receipt or revenue milestone.
