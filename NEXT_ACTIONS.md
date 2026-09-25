@@ -343,3 +343,15 @@ Do not run the unchanged crypto replay again or increase its 80,000-message budg
 - After the incident clears, first execute the dependency smoke in a non-production branch/local runner: prove `import aiohttp` fails under the current workflow set, add a pinned compatible dependency, initialize the actual no-network NATS aiohttp transport path, run existing MDRTF tests, and prove rollback to the captured workflow. Do not merge from an import-only PASS.
 - Current capacity remains unknown; last verified is 412,036,243 bytes (82.41%) at 08:19 UTC. Keep primary 20, matched controls, exploration cohort, frozen 210, thresholds and `prospective_since` values immutable.
 - No mint, wallet signature, transfer, trade, paid service or other financial action is authorized.
+
+
+
+## 2026-09-25 13:57 UTC — intensified-incident hold
+
+- Continue the hard incident hold. The 12:37–13:57 UTC window contains 126 statement timeouts and 79 connection/protocol failures through 13:56:59 UTC. Send no PostgreSQL SQL, EXPLAIN, size probe, cohort scan, manual compaction, job rerun or cadence increase.
+- Do not localize the incident to family lane or stop one job based on frequency alone. Discovery, premint and process account for 72/107 identifiable cron timeouts, but outcome, crypto, maintenance, retention and auxiliary crossover are also affected. Safe load shedding still lacks dependency/backfill/rollback proof.
+- Treat new workflow starts as observation only. Propagation 36142478858 and discovery 36144111241 are running but have not published completed snapshots; MDRTF 36129078052 remains in the same long collection step.
+- Keep the latest crypto snapshot `DATA_GAP` for historical and negative conclusions. Near-live keyword coverage does not restore unknown prehistory, approval-gated Reddit or disabled Bluesky search.
+- The next single safe development remains the isolated MDRTF `aiohttp` fail-before/pass-after transport test, but do not execute or merge it until the database log plane is clean and the current MDRTF run ends. Preserve the workflow rollback and artifact-resume gates.
+- Current database capacity is unknown; last verified is 412,036,243 bytes (82.41%) at 08:19 UTC. Preserve primary 20, matched controls, exploration cohort, frozen 210, thresholds and `prospective_since`.
+- No mint, wallet signature, transfer, trade, paid service or other financial action is authorized.
