@@ -330,3 +330,16 @@ Do not run the unchanged crypto replay again or increase its 80,000-message budg
 - After infrastructure recovery, require a fresh near-live crypto snapshot and source-time evidence before any exact-object conclusion. The current cursor is about 37h48m stale; TikTok has zero videos and discovery is over two hours old. Zero matches remain `DATA_GAP`.
 - Current database capacity is unknown under the fail-fast gate; last verified is 412,036,243 bytes (82.41%) at 08:19 UTC. Preserve primary 20, matched controls, exploration cohort, frozen 210, thresholds and `prospective_since` values.
 - No mint, wallet signature, transfer, trade, paid service or other financial action is authorized.
+
+
+
+## 2026-09-25 12:37 UTC — active-incident hold after Actions recovery
+
+- Actions scheduling resumed naturally, but do not interpret run creation or crypto technical success as database recovery or economic validation. The database log plane still produced multi-family timeouts through 12:35 UTC.
+- Continue the hard incident hold: no PostgreSQL SQL, EXPLAIN, capacity probe, cohort/freeze scan, manual compaction, job rerun or cadence increase until the independent log plane has a genuinely clean window.
+- Treat the new crypto snapshot as **near-live but coverage-ineligible for negative conclusions**. It is `PARTIAL_OR_BASELINE_UNKNOWN`, began from unknown prehistory, lacks Reddit and Bluesky search coverage, and uses low-reliability keyword-only observations. It cannot fill the prior missing window.
+- Reject the lone exact outbound URL as a pilot: the 11:40:04 UTC Bluesky item links retrospective Pons fee commentary, not an external object independently observed before mint. Preserve it as source evidence only.
+- Do not edit or restart MDRTF while run 36129078052 is already in progress. The highest-information development remains the isolated fail-before/pass-after `aiohttp` transport smoke gate and pinned dependency repair, but it stays deferred until the database incident is quiet and the current run has ended.
+- After the incident clears, first execute the dependency smoke in a non-production branch/local runner: prove `import aiohttp` fails under the current workflow set, add a pinned compatible dependency, initialize the actual no-network NATS aiohttp transport path, run existing MDRTF tests, and prove rollback to the captured workflow. Do not merge from an import-only PASS.
+- Current capacity remains unknown; last verified is 412,036,243 bytes (82.41%) at 08:19 UTC. Keep primary 20, matched controls, exploration cohort, frozen 210, thresholds and `prospective_since` values immutable.
+- No mint, wallet signature, transfer, trade, paid service or other financial action is authorized.
