@@ -452,3 +452,35 @@ The optimized read-only query shape may explain the three family-lane timeouts b
 - Production-state commit: `9f22591babb09bddcb4e49f38c46cdb6c6b1be49`; next-action commit: `201037e9a6c59760a7e4ee79dc900c0ff73a4338`; automatic run IDs in view: `36095967968`, `36097104891`, `36098133354`, `36092388913`, `36101180099`.
 
 **Decision:** `JOB101_THREE_NATURAL_SUCCESSES / QUERY_SHAPE_NOT_SOLE_CAUSE / CAPACITY_REGROWTH_82_41_PERCENT / CRYPTO_DATA_GAP / PILOT_READY_FALSE`. No verified receipt or revenue milestone.
+
+
+### 2026-09-25 09:37 UTC — family-lane success/failure phase overlap audit
+
+**Hypothesis**
+
+If the unchanged family-lane query shape is the sole deterministic cause, its three natural successes should not be followed by identical 120-second failures without a code change. If shared contention is part of the mechanism, failure phases should show independent lock-wait or runtime pressure in other job families.
+
+**Method**
+
+- Read Supabase project state and the independent 08:19–09:37 UTC log plane before database access.
+- After detecting multiple active SQLSTATE `57014` events, send zero PostgreSQL SQL, EXPLAIN, cohort query or rerun.
+- Reconstruct family-lane timing against existing pg_cron completion durations and lock-wait messages in the log plane.
+- Inspect completed GitHub Actions logs and published discovery, propagation, TikTok and crypto snapshots.
+- Persist the bounded read-only reconstruction in `ops/family_lane_contention_overlap_2026-09-25.md`.
+
+**Result / test**
+
+- Job 101 timed out at 08:45, 09:05 and 09:25 UTC in the same `refresh_family_lane_guarded()` / `refresh_family_lane()` path, after unchanged successes at 07:23, 07:43 and 08:03.
+- `turnover_research_maintenance()` ran for up to about 42.9s during the resumed failure phase. Separate outcome-probe executions logged ShareLock waits of about 4.3–9.8s. Premint refresh/evidence and process-cycle work also occupied overlapping intervals.
+- PASS: the observed transition continues to reject `QUERY_SHAPE_IS_SOLE_DETERMINISTIC_CAUSE`.
+- SUPPORT, NOT PROOF: independent lock waits and longer maintenance runtimes make shared workload/contention a stronger explanation. No direct family-lane lock record establishes a single blocker.
+- Long GitHub source workflows overlap both successes and failures, so workflow overlap alone fails as a causal discriminator.
+- Adapter run 36097104891 published 40 items/32 actors at 09:09 UTC. Propagation run 36095967968 published 91 items/71 actors at 09:29 UTC. TikTok run 36098133354 completed 24 cycles with two hashtags/zero videos; direct API code `40101` persisted. Some Reddit RSS feeds intermittently returned HTTP 429.
+- Crypto run 36101180099 remains the latest and coverage-ineligible; its cursor ended 2026-09-23 21:30:47.437 UTC. Zero exact-object output remains `DATA_GAP`.
+- Current capacity was intentionally not probed. Last verified size remains 412,036,243 bytes at 08:19 UTC.
+- PASS: no production, cron, schema, threshold, routing, freeze, cohort or financial mutation.
+- Report commit: `29eec43a9eabed0f7ada8995e3b99723d67b6904`; production-state commit: `93c4d177a430bb252d38a1f61e22e6f85e7eb95d`; next-action commit: `eedb69819abf3fd6dc25983600e9752d69a82216`.
+
+**Decision**
+
+`PERIODIC_FAMILY_LANE_FAILURE_RECURRED / SHARED_CONTENTION_SUPPORTED_NOT_PROVEN / SOURCE_WINDOWS_COMPLETE_PARTIAL_ACCESS / CRYPTO_DATA_GAP / NO_PRODUCTION_CHANGE`. No pilot, verified creator-fee receipt or revenue milestone.
