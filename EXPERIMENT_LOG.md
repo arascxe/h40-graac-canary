@@ -276,3 +276,14 @@ GitHub/source countercheck: long discovery/TikTok/propagation jobs completed, bu
 **Result/test.** Logs remained free of startup, statement and connection errors. The prior bounded probe measured 419,335,315 bytes (~83.87%), but did not establish why storage fell. Job 95's wrapper calls `process_turnover_outcome_canonical()`, `process_turnover_outcome_econ()`, `queue_turnover_outcome_probes()` and `refresh_turnover_model_state()`; latest 12 executions were successful. This rejects the narrow/disposable-job assumption. Crypto run 36068795919 passed workflow tests but exhausted 80,000 messages, advanced only 27m45s, ended at 2026-09-23 20:35:46 UTC and published ~26h05m53s stale with `caught_up_near_live=false`, zero fresh keyword posts and partial/unknown coverage.
 
 **Decision.** Job-95 pause candidate rejected; unchanged crypto replay remains rejected. State is `PROVISIONAL_CAPACITY_RECOVERY / CRYPTO_DATA_GAP / NO_PRODUCTION_CHANGE`. No exact-object pilot, verified receipt or economic validation.
+
+
+## 2026-09-25 01:31 UTC — recovery falsification and passive crypto divergence confirmation
+
+**Hypothesis.** The prior multi-hour quiet interval may represent durable database recovery; the next natural crypto schedule may at least stop losing ground without changing the already rejected replay method.
+
+**Method.** Read the independent Supabase log plane for 00:10–01:31 UTC before database access. On observing multiple statement timeouts, execute zero PostgreSQL SQL, cohort queries, EXPLAIN, reruns or mutations. Inspect the natural crypto run [36079643535](https://github.com/arascxe/h40-graac-canary/actions/runs/36079643535) and its decoded job log. This is passive confirmation of a rejected method, not a new trial or new cohort.
+
+**Result/test.** Recovery hypothesis failed: five statement timeouts occurred 00:44–01:05 UTC plus one connection reset. Crypto workflow tests passed, but 80,000 messages advanced the cursor only ~26m21s to 2026-09-23 21:01:55 UTC; publication lag was ~27h52m43s. It reported `caught_up_near_live=false`, zero fresh keyword posts and partial/unknown coverage. No exact-object absence is admissible. State/action commits: `a72f1dd`, `aa65f08`.
+
+**Decision.** `RECOVERY_REJECTED / DATA_GAP / NO_SAFE_SQL`. Do not repeat or enlarge the unchanged replay. Freeze/cohort state and economic conclusions remain unchanged; no pilot or verified receipt.
