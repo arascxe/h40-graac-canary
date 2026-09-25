@@ -322,3 +322,16 @@ The clean database window did not persist. Independent logs recorded five statem
 Automatic production activity, separate from this session: scheduled crypto run [36079643535](https://github.com/arascxe/h40-graac-canary/actions/runs/36079643535) completed technically at 00:54 UTC. It exhausted 80,000 messages and advanced its Jetstream cursor only from 2026-09-23 20:35:34 to 21:01:55 UTC (~26m21s) while more than two hours elapsed between snapshots. At publication it was ~27h52m43s behind, with `caught_up_near_live=false`, `fresh_keyword_posts=0` and `PARTIAL_OR_BASELINE_UNKNOWN`. Its five low-reliability items and zero fresh exact-object evidence are coverage-ineligible, not economic negatives.
 
 Propagation run 36071394891, adapter-bus run 36071756803 and TikTok run 36072567786 remained in progress. No end-to-end source recovery, manually verified pre-mint crossover, pilot or user-wallet creator-fee receipt appeared. Primary 20, matched controls, exploratory 20 and frozen 210 were not queried or changed. Last verified capacity remains 419,335,315 bytes (~83.87%); it was not re-probed during timeout recurrence. This session changed documentation only. Decision: `TIMEOUT_RECURRENCE / CRYPTO_DATA_GAP_27H53M / NO_DATABASE_PROBE / NO_PRODUCTION_CHANGE`.
+
+
+### 2026-09-25 02:56 UTC — storage reaches 95.74%; automatic compactor threshold imminent
+
+- Separate log-plane review for 01:31–02:56 UTC found one statement timeout at 02:45 UTC, with no cron-startup timeout or connection error in that window. Because there was no active multi-timeout pattern, this session performed exactly one bounded read-only database probe.
+- `pg_database_size(current_database())` returned **478,702,739 bytes**, or **95.74% of the 500,000,000-byte free allowance**. This is **59,367,424 bytes higher** than the last verified 419,335,315-byte checkpoint and leaves only **21,297,261 bytes** of headroom.
+- The verified size is only **3,642,221 bytes (~3.47 MiB)** below the existing 460 MiB automatic compactor trigger. The trigger is therefore imminent, but manual compaction or lowering the threshold remains unsafe until the shared `net._http_response` consumers, exclusive rebuild behavior, and rollback path are fully proven.
+- Natural GitHub workflows remained incomplete at the checkpoint: propagation run `36071394891`, adapter-bus run `36071756803`, and TikTok run `36072567786`. Their continued execution is not coverage recovery or economic validation.
+- No newer completed source snapshot was available. The last crypto-native result remains stale and its zero exact-object result remains `DATA_GAP`, not a negative economic result.
+- The immutable primary 20, matched controls, separate exploration cohort, and frozen 210-launch cohort were not queried or changed. No verified pilot candidate or creator-fee receipt to the user wallet exists.
+- This session made no production job, cron, schema, threshold, routing, or financial change. It sent one small read-only capacity probe and updated durable evidence only.
+
+Decision: **CRITICAL_CAPACITY_95_74_PERCENT / AUTO_COMPACTOR_THRESHOLD_IMMINENT / NO_MANUAL_COMPACTION**.
