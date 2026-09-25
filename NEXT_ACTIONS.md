@@ -248,3 +248,13 @@ Do not run the unchanged crypto replay again or increase its 80,000-message budg
 4. If size falls, require evidence of actual reclaim plus downstream/pending-response safety before clearing the incident. A one-row cron completion alone is not compaction success.
 5. Treat propagation and adapter coverage as fresh but partial. TikTok video coverage remains missing and the direct API remains `40101`; crypto-native exact-object coverage remains stale. Do not open the primary 20, controls, exploration cohort, or frozen 210 outcomes under these gaps.
 6. No coin mint, wallet signature, transfer, trade, paid service, or other financial action is authorized.
+
+
+### 2026-09-25 05:35 UTC — post-compaction safety window
+
+1. Record **364,235,923 bytes (72.85%)** as the immutable post-compaction capacity checkpoint. Do not manually rerun compaction or change its 460 MiB guard.
+2. Keep new collectors, replay expansion, schema changes, and broad cohort scans closed until at least one clean observation window verifies that pending-response processing, existing source freshness, and job backlogs did not regress after the 05:25 reclaim.
+3. Allow the already scheduled propagation, adapter, TikTok, and MDRTF workflows to finish naturally. Do not dispatch duplicates or interpret starts as recovery.
+4. Crypto-native exact-object coverage remains stale and ineligible; do not repeat the rejected unchanged replay or count zero matches as negatives.
+5. Preserve primary 20, matched controls, exploration cohort, and frozen 210. Reopen prospective outcome analysis only after database stability and relevant source coverage are jointly verified.
+6. No mint, wallet signature, transfer, trade, paid service, or other financial action is authorized.
