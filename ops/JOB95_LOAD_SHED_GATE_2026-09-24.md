@@ -62,3 +62,23 @@ synchronous consumers and deterministic backfill remain unproven.
 
 Until these gates pass: preserve job 95 unchanged. No coin, trade, wallet,
 transfer or paid action is authorized.
+
+
+## 2026-09-25 03:25 UTC — dependency snapshot and renewed capacity gate
+
+Read-only observation only; no cron, schema, data, threshold, freeze, or funds changed.
+
+- Database size: **480,496,787 bytes** (~96.10% of the 500 MB free quota), up **61,161,472 bytes** from the 419,335,315-byte recovery checkpoint. The unexplained recovery was therefore not durable; additional database probing stopped after this bounded query.
+- Log window 2026-09-24 23:09–2026-09-25 03:24 UTC: 2,290 completion events, 206 job-95 completions, 0 job-95 failures, 6 statement-timeout messages and 1 connection-reset message. The timeouts clustered at 00:44–00:45 UTC, with isolated events at 01:05 and 02:45 UTC. This is degraded/recurrent pressure, not the earlier broad multi-family outage.
+- Latest 12 job-95 executions all succeeded. Runtime was normally sub-second; one observed execution took ~3.63 seconds.
+
+Direct function-definition audit:
+
+1. `process_turnover_outcome_canonical()` consumes completed canonical HTTP responses, mutates prospective token-link state, may immediately queue DexScreener economic probes, and marks request rows processed.
+2. `process_turnover_outcome_econ()` consumes economic responses, writes 24-hour turnover/estimated-fee maturity fields, and marks request rows processed.
+3. `queue_turnover_outcome_probes()` creates up to four external HTTP requests per tick for matured eligible links and increments probe state/attempt counters.
+4. `refresh_turnover_model_state()` recomputes aggregate training/model readiness state from accumulated outcome tables.
+
+Decision: **whole-job pause remains rejected**. The only plausible future load-shed seam is the queueing subfunction, but it is not independently scheduled and skipping it would delay future-only outcomes. Any refactor needs a shadow wrapper test, explicit backlog/backfill proof, and a database-capacity safety margin before production use. At current capacity no refactor or additional collector is authorized.
+
+State: `CAPACITY_REBOUND_CRITICAL / JOB95_DEPENDENCIES_CLASSIFIED / WHOLE_JOB_PAUSE_REJECTED / NO_PRODUCTION_CHANGE`.
