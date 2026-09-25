@@ -3,7 +3,7 @@
 This directory is isolated from the historical H40 GRAAC canary. It does not
 reuse CSR signals, raw CTO rules, prior outcomes, or trading authority.
 
-The workflow runs one prospective cut every 90 seconds for 210 cuts, restores
+The workflow runs one prospective cut every 90 seconds for 208 cuts, restores
 the latest successful state artifact, and writes one compressed rolling state
 artifact per six-hour job. Artifacts expire after seven days. No Telegram or
 other notification is emitted.
@@ -23,3 +23,10 @@ canonical AFT decisions or unlock capital.
 `MDRTF_PERSISTENT_PUBLIC_SKILL_CONSENSUS_V1.md` defines the future-only,
 paper-only realized-wallet-skill and independent-consensus lane. It cannot use
 unverified funding roots, submit transactions, or unlock capital.
+
+`MDRTF_ATTENTION_ISSUANCE_SHADOW_V1.md` defines a separate future-only issuer
+research lane. `attention_issuance_shadow.py` may identify only a
+`LAUNCH_DUE_DILIGENCE_CANDIDATE` when attention quorum, provisional novelty,
+and continuous Pump launch coverage pass without a semantic launch. Historical
+canonicality and rights remain unverified; the lane cannot deploy, sign, spend,
+promote, or unlock capital.

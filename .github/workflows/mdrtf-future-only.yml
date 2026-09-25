@@ -47,7 +47,8 @@ jobs:
           python3 -m unittest -v test_public_skill_consensus.py
           python3 -m unittest -v test_pump_future_census.py
           python3 -m unittest -v test_pump_realtime_stream.py
-          python3 -m py_compile mdrtf_collector.py family_optionality_shadow.py public_skill_consensus.py pump_future_census.py pump_realtime_stream.py
+          python3 -m unittest -v test_attention_issuance_shadow.py
+          python3 -m py_compile mdrtf_collector.py family_optionality_shadow.py public_skill_consensus.py pump_future_census.py pump_realtime_stream.py attention_issuance_shadow.py
 
       - name: Collect 208 prospective cuts
         run: |
@@ -111,6 +112,23 @@ jobs:
               health["pump_stream_buffer_gaps"] = conn.execute(
                   "select count(*) from pump_stream_cuts where coverage_state='BUFFER_GAP'"
               ).fetchone()[0] if "pump_stream_cuts" in tables else 0
+              health["issuance_due_diligence_candidates"] = conn.execute(
+                  "select count(distinct event_id) from issuance_candidate_observations "
+                  "where candidate_state='LAUNCH_DUE_DILIGENCE_CANDIDATE'"
+              ).fetchone()[0] if "issuance_candidate_observations" in tables else 0
+              health["issuance_due_diligence_observations"] = conn.execute(
+                  "select count(*) from issuance_candidate_observations "
+                  "where candidate_state='LAUNCH_DUE_DILIGENCE_CANDIDATE'"
+              ).fetchone()[0] if "issuance_candidate_observations" in tables else 0
+              health["issuance_actionable_launches"] = 0
+              health["issuance_capital_state_violations"] = sum([
+                  conn.execute("select count(*) from issuance_shadow_runtime where capital_state <> 'CAPITAL_LOCKED'").fetchone()[0]
+                  if "issuance_shadow_runtime" in tables else 0,
+                  conn.execute("select count(*) from issuance_attention_births where capital_state <> 'CAPITAL_LOCKED'").fetchone()[0]
+                  if "issuance_attention_births" in tables else 0,
+                  conn.execute("select count(*) from issuance_candidate_observations where capital_state <> 'CAPITAL_LOCKED'").fetchone()[0]
+                  if "issuance_candidate_observations" in tables else 0,
+              ])
               conn.close()
           run_path = Path("runtime/mdrtf_run.jsonl")
           rows = []
@@ -167,6 +185,7 @@ jobs:
               and health.get("fos_capital_state_violations", 0) == 0
               and health.get("ppsc_capital_state_violations", 0) == 0
               and health.get("pump_capital_state_violations", 0) == 0
+              and health.get("issuance_capital_state_violations", 0) == 0
           )
           Path("runtime/mdrtf_health.json").write_text(json.dumps(health, indent=2), encoding="utf-8")
           if health.get("integrity") not in (None, "ok"):
