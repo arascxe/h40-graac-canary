@@ -265,3 +265,14 @@ GitHub/source countercheck: long discovery/TikTok/propagation jobs completed, bu
 **Result/test.** The 73-minute log window was clean. Database size was 461,270,163 bytes (~92.25%), an 8,404,992-byte increase from the prior verified 452,865,171-byte checkpoint. Job 95 was `active=true`, scheduled every `59 seconds`, command `select fee100k_private.turnover_outcome_probe_tick();`. Repository search found no versioned definition or schedule, so dependency/backfill/rollback closure failed. The point-in-time gate is commit `0f1c4ff`; state/action commits are `2f503f5` and `2637378`.
 
 **Decision.** Probe PASS; production-change admission FAIL. Preserve job 95 unchanged. Remain `CRITICAL_CAPACITY / SHADOW_CANDIDATE_ONLY`; require a narrow function/dependency export after another clean window before any cadence change. No pilot, verified receipt or economic validation.
+
+
+## 2026-09-25 00:04 UTC — job-95 pause falsification and provisional capacity recovery
+
+**Hypothesis.** After a multi-hour clean log window, job 95 may be a narrow downstream family that can be paused reversibly, while storage pressure may have recovered enough to permit the decision.
+
+**Method.** Use the previously bounded live-definition/cron probe recorded in commits `3d0d789` and `1fb3d75`; independently verify the next natural crypto job log for run [36068795919](https://github.com/arascxe/h40-graac-canary/actions/runs/36068795919). Read only the separate log plane for 22:34–00:04 and GitHub run state. Run no new PostgreSQL SQL, cohort query, EXPLAIN, job rerun or mutation in this session.
+
+**Result/test.** Logs remained free of startup, statement and connection errors. The prior bounded probe measured 419,335,315 bytes (~83.87%), but did not establish why storage fell. Job 95's wrapper calls `process_turnover_outcome_canonical()`, `process_turnover_outcome_econ()`, `queue_turnover_outcome_probes()` and `refresh_turnover_model_state()`; latest 12 executions were successful. This rejects the narrow/disposable-job assumption. Crypto run 36068795919 passed workflow tests but exhausted 80,000 messages, advanced only 27m45s, ended at 2026-09-23 20:35:46 UTC and published ~26h05m53s stale with `caught_up_near_live=false`, zero fresh keyword posts and partial/unknown coverage.
+
+**Decision.** Job-95 pause candidate rejected; unchanged crypto replay remains rejected. State is `PROVISIONAL_CAPACITY_RECOVERY / CRYPTO_DATA_GAP / NO_PRODUCTION_CHANGE`. No exact-object pilot, verified receipt or economic validation.
