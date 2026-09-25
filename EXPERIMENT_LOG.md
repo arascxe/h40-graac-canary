@@ -340,3 +340,31 @@ The database may naturally cross the existing 460 MiB guard and reclaim space wi
 
 **Decision**
 `CRITICAL_CAPACITY_96_16_PERCENT / COMPACTOR_RECLAIM_UNPROVEN / PARTIAL_SOURCE_RECOVERY / DATA_GAP`. Preserve all immutable cohorts and economic conclusions.
+
+
+### 2026-09-25 05:35 UTC — natural compaction reclaim verification
+
+**Hypothesis**
+The existing automatic 460 MiB guard may reclaim storage safely after natural growth crosses the threshold, without manual invocation or a threshold change.
+
+**Method**
+- Read Supabase project status and the independent 04:16–05:35 UTC log plane first.
+- With no timeout/connection pattern active, execute two bounded read-only probes only: current database size and the latest four job-96 run records.
+- Inspect natural GitHub workflow state without reruns, dispatches, cohort queries, or mutations.
+
+**Result**
+- The log window was free of startup, statement, `57014`, and connection errors.
+- Job 96 run `215856` started at 05:25:00 UTC and succeeded at 05:25:03 UTC; surrounding runs were successful short guard returns.
+- Database size measured **364,235,923 bytes (72.85%)**, down **116,719,616 bytes** from the preceding 480,955,539-byte measurement and leaving 135,764,077 bytes of headroom.
+- The timing and size discontinuity verify natural automatic reclaim. They do not independently prove loss-free processing for every shared-response consumer.
+- Propagation `36095967968`, adapter `36097104891`, TikTok `36098133354`, and MDRTF `36092388913` were in progress. No new crypto-native snapshot, exact-object candidate, pilot, or wallet receipt appeared.
+
+**Safety / test**
+- PASS: automatic threshold behavior reclaimed measured capacity with no manual trigger or configuration change.
+- PASS: fail-fast log-first ordering and bounded read-only verification.
+- PASS: no production, schema, cron, alert, freeze, or financial mutation.
+- HOLD: downstream consumer/backlog/source-freshness safety after reclaim remains to be observed.
+- Durable state/action commits: `3deafc19a297083170b905d3ef8d60aaae9c768e`, `6603e5b67c9d0bbbd22185362a15b2cc4dffc43e`.
+
+**Decision**
+`CAPACITY_RECLAIM_VERIFIED / POST_COMPACTION_OBSERVATION_REQUIRED / DATA_GAP / NO_ECONOMIC_VALIDATION`.
