@@ -288,3 +288,14 @@ Do not run the unchanged crypto replay again or increase its 80,000-message budg
 - Treat 412,036,243 bytes (82.41%) as the current point-in-time capacity checkpoint. Do not lower the compactor threshold, manually compact, or add ingestion. Recheck only after a clean log gate.
 - Discovery is current, while TikTok video coverage and crypto-native near-live coverage remain missing. Do not count zero exact-object matches or absent cohort outcomes as negatives.
 - Keep primary 20, controls, exploration cohort and frozen 210 closed. No mint, signature, transfer, trade, paid service or other financial action is authorized.
+
+
+## 2026-09-25 09:37 UTC — contention-phase diagnostic gate
+
+- Treat the 08:45, 09:05 and 09:25 UTC family-lane `57014` sequence as an active recurring incident. Send no PostgreSQL SQL, EXPLAIN, cohort scan, full count, manual compaction or job rerun until an independent-log window is clean.
+- Preserve job 101 and the faster shadow core unchanged. Current evidence supports an intermittent shared-load/contention component but does not identify a single culprit or authorize deployment.
+- The next single highest-information test is **log-plane-only phase comparison** using the versioned overlap matrix in `ops/family_lane_contention_overlap_2026-09-25.md`. Require at least one later natural success/failure pair, then compare maintenance duration, outcome-probe lock waits, premint/process-cycle occupancy and family-lane start/end timing. Fail the single-cause hypothesis if the proposed marker does not separate successes from failures.
+- Only after the incident is quiet may the previously specified same-`as_of`, write-free semantic-equivalence test run. Delta-only write behavior, every consumer, deterministic backfill and one-command rollback remain mandatory before any production replacement.
+- Do not treat completed source workflows as complete coverage: TikTok is still two hashtags/zero videos with direct API code `40101`, some Reddit RSS feeds return intermittent 429, and crypto-native remains stale. Zero exact-object matches and missing prospective outcomes remain `DATA_GAP`.
+- Do not remeasure database size during the active sequence. The last verified point is 412,036,243 bytes (82.41%) at 08:19 UTC. Preserve primary 20, controls, exploration cohort and frozen 210.
+- No mint, wallet signature, transfer, trade, paid service or other financial action is authorized.
