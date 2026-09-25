@@ -352,3 +352,16 @@ Decision: **CRITICAL_CAPACITY_95_74_PERCENT / AUTO_COMPACTOR_THRESHOLD_IMMINENT 
 - This session changed only documentation after one bounded size probe. No production job, cron, schema, compactor threshold, routing, freeze, or financial state changed.
 
 Decision: **CRITICAL_CAPACITY_96_16_PERCENT / COMPACTOR_PASS_WITHOUT_RECLAIM / PARTIAL_SOURCE_RECOVERY / PILOT_READY_FALSE**.
+
+
+### 2026-09-25 05:35 UTC — automatic compaction reclaims measured capacity
+
+- Supabase remained `ACTIVE_HEALTHY`. The independent 04:16–05:35 UTC log window contained no startup timeout, statement timeout, `57014`, or connection error.
+- Automatic production activity, separate from this session: job 96 continued on its ten-minute cadence. Its 05:25 UTC execution succeeded in 2.95 seconds, materially longer than the surrounding guard-return executions, and the next 05:35 execution succeeded normally.
+- Two bounded read-only verification queries measured database size and the last four job-96 run records. Database size fell to **364,235,923 bytes**, or **72.85%** of the 500,000,000-byte free allowance. This is **116,719,616 bytes lower** than the immediately preceding verified 480,955,539-byte checkpoint and restores **135,764,077 bytes** of headroom.
+- The coupled timing, successful 05:25 run, and measured size reduction establish that the existing automatic compactor crossed its natural guard and reclaimed storage without manual invocation or threshold change. This is capacity recovery evidence, not proof that all downstream consumers are loss-free.
+- Natural source workflows restarted after the previous completed four-hour windows: propagation `36095967968`, adapter bus `36097104891`, TikTok `36098133354`, and MDRTF `36092388913` were in progress. Their start does not establish coverage or economic validation. No new crypto-native run was published; the last exact-object result remains stale `DATA_GAP`.
+- The primary 20, matched controls, separate exploration cohort, and frozen 210-launch cohort were not queried or modified. No verified independent pre-mint crossover, user-wallet creator-fee receipt, or revenue milestone appeared.
+- This session made no production, cron, schema, threshold, routing, freeze, or financial change.
+
+Decision: **CAPACITY_RECLAIM_VERIFIED_72_85_PERCENT / POST_COMPACTION_SAFETY_UNPROVEN / SOURCE_DATA_GAP / NO_PRODUCTION_CHANGE**.
