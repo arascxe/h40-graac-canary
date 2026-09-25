@@ -299,3 +299,14 @@ Do not run the unchanged crypto replay again or increase its 80,000-message budg
 - Do not treat completed source workflows as complete coverage: TikTok is still two hashtags/zero videos with direct API code `40101`, some Reddit RSS feeds return intermittent 429, and crypto-native remains stale. Zero exact-object matches and missing prospective outcomes remain `DATA_GAP`.
 - Do not remeasure database size during the active sequence. The last verified point is 412,036,243 bytes (82.41%) at 08:19 UTC. Preserve primary 20, controls, exploration cohort and frozen 210.
 - No mint, wallet signature, transfer, trade, paid service or other financial action is authorized.
+
+
+## 2026-09-25 10:27 UTC — revised diagnostic and scheduling gate
+
+- Do not use the presence of `turnover_outcome_probe_tick()` row-lock waits as a family-lane failure trigger. The 10:03 and 10:23 UTC successes occurred while that wait pattern persisted, so it is not a sufficient discriminator.
+- Keep job 101 and the shadow core unchanged. Continue log-first observation; after a genuinely clean window, the next single safe test is a bounded, write-free same-`as_of` comparison that also records query-input cardinalities and output hashes. Do not run it during renewed timeout activity, and do not deploy until semantic equivalence, delta-write behavior, consumer compatibility, backfill and rollback gates pass.
+- Treat the absent crypto schedules as a critical coverage issue: the workflow declares four runs per hour, yet no run appeared for more than four hours after 06:03 UTC. Do not dispatch a replacement or enlarge replay. First wait for the current MDRTF run to finish naturally or reach its own timeout, then verify whether scheduled crypto creation resumes without intervention.
+- Do not cancel MDRTF solely from temporal overlap; source workflows have both succeeded and failed while long workflows were present. Record its `Collect 208 prospective cuts` duration and final conclusion before causal attribution.
+- Continue classifying crypto exact-object absence, TikTok zero-video output, intermittent Reddit 429s and unqueried cohort results as `DATA_GAP`.
+- Current capacity remains unknown under the fail-fast gate; last verified 412,036,243 bytes at 08:19 UTC. Preserve primary 20, controls, exploration cohort and frozen 210.
+- No mint, signature, transfer, trade, paid service or other financial action is authorized.
