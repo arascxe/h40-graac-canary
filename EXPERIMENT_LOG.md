@@ -311,3 +311,32 @@ GitHub/source countercheck: long discovery/TikTok/propagation jobs completed, bu
 - PASS: production jobs, cron, schema, compactor threshold, alert routing, and financial state unchanged.
 - HOLD: manual compaction and threshold changes remain blocked until shared HTTP-response consumers and rollback safety are proven.
 - Durable state commits: `f4f7f3d4f7b9252c5d790f3af5ffb071a6a9e058` and `32a036cef7d2964c23789eb7053ca26c034ab14d`.
+
+
+### 2026-09-25 03:58 UTC — natural compactor and source-completion verification
+
+**Hypothesis**
+The database may naturally cross the existing 460 MiB guard and reclaim space without intervention, while the three long-running source workflows may restore enough end-to-end coverage for exact-object or pilot evaluation.
+
+**Method**
+- Read Supabase project state and the separate 02:56–03:58 UTC log plane first.
+- Verified all job-96 start/completion records and timeout/connection patterns.
+- Because the window contained no active timeout pattern, executed exactly one bounded read-only SQL statement: `select pg_database_size(current_database()) as database_bytes;`.
+- Read the completed job logs for TikTok run `36072567786`, adapter-bus run `36071756803`, and propagation run `36071394891`.
+- Did not query cohorts, freezes, outcomes, receipts, broad catalogs, or rerun any job.
+
+**Result**
+- Job 96 technically completed six times (03:05–03:55 UTC), but database size reached **480,808,083 bytes (96.16%)**, 2,105,344 bytes above the 02:56 checkpoint and only 1,536,877 bytes below the 460 MiB guard. No storage reclaim is evidenced.
+- TikTok completed 24 cycles but ended with two hashtags and zero videos. The adapter completed 160 cycles and ended with 40 items/36 independent actors; direct TikTok API code `40101` persisted. Propagation completed 180 cycles and ended with 73 items/67 actors at 03:51 UTC.
+- Fresh public propagation and adapter output are restored, but TikTok video coverage and near-live crypto-native exact-object coverage are not. No exact-object pilot or fee receipt is admissible.
+
+**Safety / test**
+- PASS: log-first fail-fast order.
+- PASS: one small read-only SQL statement and no additional database load.
+- PASS: no production, cron, schema, threshold, routing, freeze, or financial mutation.
+- FAIL: compactor technical completion is not storage-reclaim evidence.
+- FAIL: complete end-to-end source coverage is not restored.
+- Durable state/action commits: `1df53855237595ffbe6ae7745cfbba3207851e12`, `3f128f53216a9f594c44c6ff424cdfe6e7020d8e`.
+
+**Decision**
+`CRITICAL_CAPACITY_96_16_PERCENT / COMPACTOR_RECLAIM_UNPROVEN / PARTIAL_SOURCE_RECOVERY / DATA_GAP`. Preserve all immutable cohorts and economic conclusions.
