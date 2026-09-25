@@ -544,3 +544,34 @@ The renewed failures may remain localized to family lane, and MDRTF's prospectiv
 **Decision**
 
 `CRITICAL_MULTI_FAMILY_DB_INCIDENT / ACTIONS_SCHEDULER_GAP / MDRTF_OPERATIONAL_CADENCE_FAIL / AIOHTTP_RUNTIME_DEFECT_VERIFIED / DATA_GAP / NO_PRODUCTION_CHANGE`. The selected next development is the isolated, fail-before/pass-after aiohttp transport smoke gate, deferred until database and Actions scheduling recovery. No pilot, verified creator-fee receipt or revenue milestone.
+
+
+
+### 2026-09-25 12:37 UTC — incident continuation and partial crypto-recovery audit
+
+**Hypothesis**
+
+Natural Actions scheduling recovery may restore reliable crypto coverage, while the earlier broad database event may have subsided after 11:19 UTC.
+
+**Method**
+
+- Read Supabase project status and the independent 11:19–12:37 UTC log plane before database access.
+- Aggregate SQLSTATE `57014` and connection/protocol failures by application and pg_cron query family.
+- Because multi-family errors remained active, execute zero PostgreSQL SQL, EXPLAIN, capacity query, cohort/freeze scan or rerun.
+- Inspect new Actions creation, crypto run 36130856236 job logs and its immutable published snapshot; inspect MDRTF run 36129078052 state.
+- Manually classify every exact outbound URL in the new crypto snapshot against the pre-mint requirement.
+
+**Result / test**
+
+- FAIL: database recovery. The window contained 107 `57014` events and 61 connection/protocol errors, with errors continuing through 12:35 UTC.
+- The 95 identifiable pg_cron timeouts spanned discovery adapter bus 26, process cycle 26, premint TikTok/discovery 23, crypto crossover 6, premint refresh/evidence 4, turnover maintenance 3, family lane 3, outcome probe 2, control freeze 1 and forensic maintenance 1.
+- PASS: Actions run creation resumed naturally. MDRTF run 36129078052 began at 11:23 UTC; crypto run 36130856236 began at 11:42 UTC and completed successfully.
+- PARTIAL ONLY: crypto processed 41,894 Jetstream messages, published 47 items and reached near-live, but declared `PARTIAL_OR_BASELINE_UNKNOWN` / `LOW_UNVERIFIED_CRYPTO_KEYWORD_ONLY`. Reddit remained approval-gated, Bluesky search remained disabled after 403, and the run began from `BASELINE_16M_UNKNOWN_PREHISTORY`.
+- MANUAL REJECTION: the snapshot's only exact outbound URL was in an 11:40:04 UTC Bluesky post linking retrospective Pons fee commentary. It is not a new external object independently observed before token mint and is not a crossover candidate.
+- HOLD: MDRTF dependency repair. Run 36129078052 is already executing with the unchanged dependency set while the database incident is active.
+- PASS: no production, workflow, cron, schema, compactor, threshold, routing, freeze, cohort, alert or financial mutation.
+- Incident report commit: `7e58ba9dede42daef6b691d1a66384f7700cf1df`; production-state commit: `5de669f9abebdc678e6ea7f26abb8f81cdbc331c`; next-action commit: `16b83ce92e878f4758ed925f4d0f71ee64448cb9`; observed runs: `36130856236`, `36129078052`.
+
+**Decision**
+
+`DB_INCIDENT_ACTIVE / ACTIONS_SCHEDULER_RECOVERED / CRYPTO_NEAR_LIVE_PARTIAL_BASELINE_UNKNOWN / NO_PREMINT_EXACT_OBJECT / MDRTF_DEFECT_REPAIR_DEFERRED / DATA_GAP / NO_PRODUCTION_CHANGE`. No pilot, verified creator-fee receipt or revenue milestone.
