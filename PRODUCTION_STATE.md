@@ -335,3 +335,20 @@ Propagation run 36071394891, adapter-bus run 36071756803 and TikTok run 36072567
 - This session made no production job, cron, schema, threshold, routing, or financial change. It sent one small read-only capacity probe and updated durable evidence only.
 
 Decision: **CRITICAL_CAPACITY_95_74_PERCENT / AUTO_COMPACTOR_THRESHOLD_IMMINENT / NO_MANUAL_COMPACTION**.
+
+
+### 2026-09-25 03:58 UTC — compactor technical PASS does not reclaim capacity; partial source recovery only
+
+- Supabase remained project-level `ACTIVE_HEALTHY`. The independent 02:56–03:58 UTC log window contained no new startup timeout, statement timeout, `57014`, or connection error.
+- Automatic production activity, separate from this session: cron job 96 started and technically completed at 03:05, 03:15, 03:25, 03:35, 03:45, and 03:55 UTC. Each completion returned one row, but technical completion did not produce a storage reduction.
+- This session therefore used its single bounded read-only database probe only for `pg_database_size(current_database())`: **480,808,083 bytes**, or **96.16%** of the 500,000,000-byte free allowance. This is 2,105,344 bytes above the 02:56 checkpoint and leaves 19,191,917 bytes. It is only 1,536,877 bytes (~1.47 MiB) below the existing 460 MiB automatic compactor threshold.
+- The logs do not prove that the table-rebuild branch actually executed; while the database remains below the threshold, the repeated technical PASS may be a no-op guard return. Manual invocation or threshold reduction remains blocked because consumer closure, exclusive rebuild safety, and rollback are unproven.
+- Automatic GitHub activity completed successfully:
+  - TikTok run [36072567786](https://github.com/arascxe/h40-graac-canary/actions/runs/36072567786) published 24 cycles through 03:18 UTC, but the terminal snapshots contained two hashtags and **zero videos**.
+  - Adapter-bus run [36071756803](https://github.com/arascxe/h40-graac-canary/actions/runs/36071756803) completed 160 cycles; its final snapshot had 40 items and 36 independent actors, while the direct TikTok API still returned code `40101`.
+  - Propagation run [36071394891](https://github.com/arascxe/h40-graac-canary/actions/runs/36071394891) completed 180 cycles; the final 03:51 UTC snapshot had 73 items and 67 independent actors.
+- These runs establish fresh public propagation and adapter output, but not complete TikTok video coverage, near-live crypto-native exact-object coverage, or an economic pilot. The last crypto-native snapshot remains ~27h53m stale; its zero exact-object result remains `DATA_GAP`.
+- The primary 20, matched controls, separate exploration cohort, and frozen 210-launch cohort were not queried or changed. No manually verified independent pre-mint crossover, user-wallet creator-fee receipt, or revenue milestone appeared.
+- This session changed only documentation after one bounded size probe. No production job, cron, schema, compactor threshold, routing, freeze, or financial state changed.
+
+Decision: **CRITICAL_CAPACITY_96_16_PERCENT / COMPACTOR_PASS_WITHOUT_RECLAIM / PARTIAL_SOURCE_RECOVERY / PILOT_READY_FALSE**.
