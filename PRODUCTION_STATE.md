@@ -462,3 +462,21 @@ Source freshness regressed. The newest crypto snapshot is still the 06:04 UTC pu
 This Work session inspected only project status, independent logs, Actions metadata/logs/workflow text and immutable source artifacts. It sent **zero PostgreSQL SQL**, no EXPLAIN, no cohort query and no job rerun. Current database size is unknown; the last verified point remains 412,036,243 bytes (82.41%) at 08:19 UTC. It did not edit the MDRTF workflow because that path would itself trigger another long run during the active incident. Production functions, cron, schema, compactor, thresholds, routing, primary 20, matched controls, exploration cohort and frozen 210 remain unchanged.
 
 Decision: `CRITICAL_MULTI_FAMILY_DB_INCIDENT / ACTIONS_SCHEDULER_GAP / MDRTF_OPERATIONAL_CADENCE_FAIL / AIOHTTP_RUNTIME_DEFECT_VERIFIED / DATA_GAP / NO_PRODUCTION_CHANGE / PILOT_READY_FALSE`. No verified independent pre-mint pilot, user-wallet creator-fee receipt or revenue milestone exists.
+
+
+
+## 2026-09-25 12:37 UTC — database incident continues; Actions resumed with partial near-live crypto coverage
+
+The Supabase project remained `ACTIVE_HEALTHY`, but the independent 11:19–12:37 UTC log plane showed the broad database incident continuing through 12:35 UTC. It recorded **107 SQLSTATE `57014` entries** and **61 connection/protocol failures** (24 `08006`, 37 `08P01`). Of the statement timeouts, 95 were identifiable pg_cron executions: discovery adapter bus 26, process cycle 26, premint TikTok/discovery 23, crypto crossover 6, premint refresh/evidence 4, turnover maintenance 3, family lane 3, outcome probe 2, control freeze 1 and forensic maintenance 1. Monitoring/exporter work added 11 more, with one unclassified event. The last pg_cron timeout was at 12:35:17 UTC and the last observed `57014` at 12:35:31 UTC.
+
+GitHub Actions creation recovered naturally after the prior gap. MDRTF run [36129078052](https://github.com/arascxe/h40-graac-canary/actions/runs/36129078052) started at 11:23 UTC and remained in `Collect 208 prospective cuts`. Crypto-native run [36130856236](https://github.com/arascxe/h40-graac-canary/actions/runs/36130856236) started at 11:42 UTC and completed successfully.
+
+The crypto run processed 41,894 Jetstream messages and published 47 items. Its cursor reached near-live, but source health remained explicitly `PARTIAL_OR_BASELINE_UNKNOWN` and `LOW_UNVERIFIED_CRYPTO_KEYWORD_ONLY`. Reddit was unavailable without explicit approval, Bluesky search remained disabled after HTTP 403, and the Jetstream run began from `BASELINE_16M_UNKNOWN_PREHISTORY`. It therefore does not repair the missing historical window or validate earlier zero matches.
+
+One item carried an exact outbound URL: a Bluesky post published at 11:40:04 UTC linking a YouTube video about already-realized Pons fee history. This is retrospective crypto commentary about an existing protocol, not an independently observed external object before mint. It is not a crossover match or pilot.
+
+This Work session used project status, independent logs, Actions metadata/logs and the immutable crypto snapshot only. It sent **zero PostgreSQL SQL**, no EXPLAIN, capacity query, cohort/freeze scan or job rerun. Current database size is unknown; the last verified point remains 412,036,243 bytes (82.41%) at 08:19 UTC. Primary 20, matched controls, separate exploration cohort and frozen 210 remain unchanged. No production job, workflow, cron, schema, compactor, threshold, alert route or financial state changed.
+
+The bounded reconstruction is in [`ops/incident_2026-09-25_1237.md`](https://github.com/arascxe/h40-graac-canary/blob/main/ops/incident_2026-09-25_1237.md), commit `7e58ba9dede42daef6b691d1a66384f7700cf1df`.
+
+Decision: `DB_INCIDENT_ACTIVE / ACTIONS_SCHEDULER_RECOVERED / CRYPTO_NEAR_LIVE_PARTIAL_BASELINE_UNKNOWN / NO_PREMINT_EXACT_OBJECT / MDRTF_DEFECT_REPAIR_DEFERRED / DATA_GAP / PILOT_READY_FALSE`. No verified creator-fee receipt or revenue milestone exists.
