@@ -368,3 +368,32 @@ The existing automatic 460 MiB guard may reclaim storage safely after natural gr
 
 **Decision**
 `CAPACITY_RECLAIM_VERIFIED / POST_COMPACTION_OBSERVATION_REQUIRED / DATA_GAP / NO_ECONOMIC_VALIDATION`.
+
+
+### 2026-09-25 06:45 UTC — post-compaction family-lane attribution and crypto freshness check
+
+**Hypothesis**
+The verified 05:25 UTC automatic reclaim may have removed the database pressure, and the next natural crypto-native run may have restored admissible near-live exact-object coverage.
+
+**Method**
+- Read Supabase project state and the independent 05:35–06:45 UTC log plane before database access.
+- Attribute the 06:25 and 06:45 timeout contexts by failing function and concurrent job family.
+- Because two active statement timeouts were present, execute exactly one small read-only SQL probe: `select pg_database_size(current_database())`; then stop all database querying.
+- Inspect natural GitHub Actions and decode the completed crypto-native run [36101180099](https://github.com/arascxe/h40-graac-canary/actions/runs/36101180099). No rerun, cohort query, freeze read, EXPLAIN, or mutation.
+
+**Result / test**
+- Supabase remained `ACTIVE_HEALTHY`, but recovery was falsified by SQLSTATE `57014` at 06:25:00 and 06:45:00 UTC. Both contexts name `refresh_family_lane_guarded()` / `refresh_family_lane()`; compactor job 96 only overlapped and is not the logged failing statement.
+- Adapter-bus work waited ~1.77 seconds on a lock for `fee100k_http_request_v1` and then proceeded. This supports concurrent contention but does not establish a sole root cause.
+- Database size was **384,642,195 bytes (76.93%)**, +20,406,272 bytes from the verified 364,235,923-byte post-compaction checkpoint, with 115,357,805 bytes remaining.
+- Crypto run 36101180099 passed workflow tests and consumed 80,000 messages, but advanced the cursor only 29m03.5s (2026-09-23 21:01:43.893→21:30:47.437 UTC) and published ~32h33m15s stale. It reported `caught_up_near_live=false`, zero fresh keyword posts and partial/unknown coverage. Exact-object absence remains `DATA_GAP`.
+- Propagation 36095967968, adapter-bus 36097104891, TikTok 36098133354 and MDRTF 36092388913 were still in progress when observed. Their start state is not economic validation.
+
+**Safety / decision**
+- PASS: log-first ordering and one-probe ceiling honored; no further SQL after active multiple timeouts.
+- PASS: no production job, cron, compactor, schema, threshold, alert, freeze or financial mutation.
+- FAIL: post-compaction database recovery is durable.
+- FAIL: crypto-native near-live coverage is restored.
+- Next safe test is an offline/versioned shadow rewrite and rollback specification for the family-lane function, only after capturing dependencies without stressing production.
+- State commit: `aa3fe72e5ca22667006eb8a33f2383469ca2d7af`; next-action commit: `9807961c91bfdd6bd5996108237e57d91795aa2a`; automatic run ID: `36101180099`.
+
+**Decision:** `POST_COMPACTION_FAMILY_LANE_TIMEOUT_RECURRENCE / CAPACITY_REGROWTH_76_93_PERCENT / CRYPTO_DATA_GAP / NO_PRODUCTION_CHANGE`. No pilot, verified creator-fee receipt, or revenue milestone.
