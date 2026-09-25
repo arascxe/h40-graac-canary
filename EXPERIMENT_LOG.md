@@ -512,3 +512,35 @@ The repeated outcome-probe ShareLock waits may distinguish family-lane failure p
 **Decision**
 
 `FAMILY_LANE_INTERMITTENT_FAILURE / HTTP_ROW_LOCK_MARKER_REJECTED / CRYPTO_SCHEDULE_GAP_GT_4H / DATA_GAP / NO_PRODUCTION_CHANGE`. No pilot, verified creator-fee receipt or revenue milestone.
+
+
+
+### 2026-09-25 11:19 UTC — multi-family incident and MDRTF live-transport audit
+
+**Hypothesis**
+
+The renewed failures may remain localized to family lane, and MDRTF's prospective cadence should remain operational if its runtime dependency set covers the live Pump transport. A healthy 15-minute schedule should also continue creating crypto runs.
+
+**Method**
+
+- Read Supabase project status and the independent 10:30–11:19 UTC log plane before any database access.
+- Aggregate startup, SQLSTATE `57014` and connection errors by job family and time.
+- Because multiple active timeout families were present, execute zero PostgreSQL SQL, EXPLAIN, table count, cohort query or job rerun.
+- Inspect GitHub Actions run creation, MDRTF job steps/logs, the versioned workflow dependency installation, the latest immutable source snapshots and run artifacts.
+- Preserve all freezes and distinguish automatic production activity from this Work session's read-only inspection.
+
+**Result / test**
+
+- FAIL: localized-family-lane hypothesis. The window contained 148 startup timeouts, 48 statement timeouts and 34 connection failures through 11:18 UTC, spanning source queueing, processing, fast-freeze, discovery, crypto/auxiliary/control crossover, premint, outcome, maintenance, compactor, retention and family lane.
+- Job 101 succeeded at 10:23 UTC and then received startup timeouts at 10:44 and 11:03; its behavior sits inside the broader incident.
+- FAIL: Actions schedule-health gate. No Actions run was created after crypto run 36101180099 at 06:03 UTC through 11:19 UTC despite the declared four-per-hour crypto schedule.
+- FAIL: MDRTF operational-cadence gate. Run 36092388913 ended near its configured 355-minute boundary with `Collect 208 prospective cuts` cancelled, runtime health failed, and repeated `coverage_complete=false` / `COVERAGE_INSUFFICIENT` cuts.
+- VERIFIED DEFECT: every live Pump-stream attempt failed with `ImportError: Could not import aiohttp transport`. The workflow installs `nats-py==2.11.0` but not `aiohttp`; existing tests do not exercise the live transport initialization.
+- Capacity note: run 36092388913 uploaded a 565,638,843-byte `mdrtf-state` artifact with seven-day retention. A causal link to schedule starvation is not proven.
+- Crypto cursor 2026-09-23 21:30:47.437 UTC was about 37h48m stale at 11:19 UTC and `caught_up_near_live=false`. Discovery's latest snapshot was 09:09 UTC; TikTok remained zero-video. All absent exact-object and prospective observations remain `DATA_GAP`.
+- PASS: zero PostgreSQL SQL under the incident rule; no production, workflow, cron, schema, compactor, threshold, routing, freeze, cohort, alert or financial mutation.
+- Incident report commit: `9fdd8c010e92d572fe53f1d58c683b4e902b1568`; production-state commit: `2ce4ef82286f4ecde4a141b92862c1509b6e4a7c`; next-action commit: `d57bdb89f4ebb4f7b84282fe43212d149ceba8f0`; observed runs: `36101180099`, `36092388913`.
+
+**Decision**
+
+`CRITICAL_MULTI_FAMILY_DB_INCIDENT / ACTIONS_SCHEDULER_GAP / MDRTF_OPERATIONAL_CADENCE_FAIL / AIOHTTP_RUNTIME_DEFECT_VERIFIED / DATA_GAP / NO_PRODUCTION_CHANGE`. The selected next development is the isolated, fail-before/pass-after aiohttp transport smoke gate, deferred until database and Actions scheduling recovery. No pilot, verified creator-fee receipt or revenue milestone.
