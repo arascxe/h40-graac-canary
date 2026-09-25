@@ -575,3 +575,33 @@ Natural Actions scheduling recovery may restore reliable crypto coverage, while 
 **Decision**
 
 `DB_INCIDENT_ACTIVE / ACTIONS_SCHEDULER_RECOVERED / CRYPTO_NEAR_LIVE_PARTIAL_BASELINE_UNKNOWN / NO_PREMINT_EXACT_OBJECT / MDRTF_DEFECT_REPAIR_DEFERRED / DATA_GAP / NO_PRODUCTION_CHANGE`. No pilot, verified creator-fee receipt or revenue milestone.
+
+
+
+### 2026-09-25 13:57 UTC — multi-family incident phase comparison
+
+**Hypothesis**
+
+The broad event may have subsided after 12:37 UTC or narrowed to one dominant job family, creating a safe load-shedding candidate.
+
+**Method**
+
+- Read project status and the independent 12:37–13:57 UTC log plane first.
+- Aggregate SQLSTATE `57014` by pg_cron query family and connection/protocol errors by state.
+- Compare the distribution with the prior 11:19–12:37 UTC window.
+- Inspect Actions run creation and job steps without dispatching, cancelling or retrying.
+- Execute zero PostgreSQL SQL because errors remained active through the end of the observation window.
+
+**Result / test**
+
+- FAIL: recovery. The window contained 126 `57014` events and 79 connection/protocol failures; the final error was at 13:56:59 UTC.
+- FAIL: single-family localization. The 107 identifiable pg_cron timeouts spanned discovery adapter bus 30, premint TikTok/discovery 25, process cycle 17, outcome probe 9, crypto crossover 8, premint refresh/evidence 7, turnover maintenance 7, family lane 2, retention 1 and auxiliary-20 crossover 1.
+- Discovery/premint/process contributed 72/107, but their frequency does not establish a single root cause or prove that stopping them preserves evidence correctness.
+- Actions continued: MDRTF 36129078052 remained in `Collect 208 prospective cuts`; propagation 36142478858 and discovery 36144111241 started but had not published completed snapshots.
+- Latest completed crypto coverage remained partial/baseline-unknown. No new verified pre-mint exact-object match exists.
+- PASS: zero PostgreSQL SQL, no EXPLAIN, size probe, cohort/freeze scan, rerun, compaction, production, workflow, cron, schema, threshold, routing or financial mutation.
+- Incident report commit: `1793dbc77813f45b25eb0e665914f2a92d770a94`; production-state commit: `61e123b3e2a58a4a63d3a65f17b4d68a85b37915`; next-action commit: `d0a352aac6fa524fbd46c64d323ce5b7eab9b175`; observed runs: `36129078052`, `36142478858`, `36144111241`.
+
+**Decision**
+
+`DB_INCIDENT_INTENSIFIED / MULTI_FAMILY_NOT_LOCALIZED / NEW_ACTIONS_RUNNING_NOT_HEALTH_PROOF / COVERAGE_INCOMPLETE / DATA_GAP / NO_PRODUCTION_CHANGE`. The MDRTF dependency smoke test remains deferred. No pilot, verified creator-fee receipt or revenue milestone.
