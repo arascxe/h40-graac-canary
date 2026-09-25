@@ -484,3 +484,31 @@ If the unchanged family-lane query shape is the sole deterministic cause, its th
 **Decision**
 
 `PERIODIC_FAMILY_LANE_FAILURE_RECURRED / SHARED_CONTENTION_SUPPORTED_NOT_PROVEN / SOURCE_WINDOWS_COMPLETE_PARTIAL_ACCESS / CRYPTO_DATA_GAP / NO_PRODUCTION_CHANGE`. No pilot, verified creator-fee receipt or revenue milestone.
+
+
+### 2026-09-25 10:27 UTC — row-lock discriminator falsification and schedule-health audit
+
+**Hypothesis**
+
+The repeated outcome-probe ShareLock waits may distinguish family-lane failure periods from success periods. Separately, a declared 15-minute crypto schedule should create new runs if effective Actions scheduling capacity is healthy.
+
+**Method**
+
+- Read Supabase project status and the independent 09:25–10:27 UTC log plane first.
+- Because another family-lane timeout appeared inside the active incident window, execute zero PostgreSQL SQL, cohort query, EXPLAIN or rerun.
+- Compare job-101 start/completion events against existing lock-wait records without querying production tables.
+- Inspect the current workflow schedule, the latest 30 Actions runs, MDRTF job steps and immutable crypto/discovery snapshots.
+
+**Result / test**
+
+- Family lane failed at 09:45 UTC after its 09:43 start, then completed unchanged at 10:03:08 and 10:23:08 UTC in ~8.6s and ~7.9s.
+- Outcome-probe ShareLock waits continued at 09:50, 09:56, 10:02, 10:14, 10:20 and 10:26 UTC. Retention also logged a lock wait at 10:07.
+- FAIL: `OUTCOME_PROBE_HTTP_ROW_LOCK_WAIT_IS_SUFFICIENT_DISCRIMINATOR`. A 10:03 success immediately followed the same wait signature. Broader contention remains possible, but this marker alone is non-predictive.
+- The crypto workflow still declares `7,22,37,52 * * * *`; nevertheless, run 36101180099 at 06:03 UTC remained the newest through 10:27 UTC. Its snapshot remained stale and `caught_up_near_live=false`.
+- No Actions run of any family was created after 06:03 UTC. MDRTF run 36092388913 remained in progress at `Collect 208 prospective cuts`. This is an effective scheduling/freshness failure, not proof that MDRTF is the sole cause.
+- PASS: zero PostgreSQL SQL under the incident gate; no production, workflow, cron, schema, threshold, freeze, cohort, alert or financial mutation.
+- Overlap-report commit: `eebd0a1dc9b67574b2a1f4edd8f1c5b7aafa3044`; production-state commit: `1da47b68ce0028eb102df23c1ac8e6dcfbef59c8`; next-action commit: `e42b1de138e883571dc1bd9107a8cd2103f57534`; observed run IDs: `36101180099`, `36092388913`.
+
+**Decision**
+
+`FAMILY_LANE_INTERMITTENT_FAILURE / HTTP_ROW_LOCK_MARKER_REJECTED / CRYPTO_SCHEDULE_GAP_GT_4H / DATA_GAP / NO_PRODUCTION_CHANGE`. No pilot, verified creator-fee receipt or revenue milestone.
