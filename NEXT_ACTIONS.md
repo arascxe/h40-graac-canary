@@ -278,3 +278,13 @@ Do not run the unchanged crypto replay again or increase its 80,000-message budg
 - Treat the externally measured 394,767,507 bytes (78.95%) at 07:24 UTC as a point-in-time capacity observation, not a new stable baseline. Do not repeat a size probe while the 20-minute timeout sequence is active.
 - Discovery is current at 07:42 UTC, but TikTok remains two hashtags/zero videos and crypto-native remains ~32h33m stale. Do not convert discovery freshness into exact-object coverage or count zero crypto matches as negatives.
 - Keep primary 20, controls, exploration cohort and frozen 210 closed. No mint, wallet signature, transfer, trade, paid service or other financial action is authorized.
+
+
+## 2026-09-25 08:19 UTC — revised family-lane diagnosis gate
+
+- Do not deploy the shadow core merely because it was faster once. The unchanged live function also completed three consecutive natural runs in about 10 seconds after three 120-second failures; query shape alone is not a sufficient root-cause explanation.
+- Highest-information next test is a read-only **failure-versus-success overlap matrix** after a longer clean window: compare concurrent cron families, long GitHub source windows, lock waits, database size and cache-sensitive inputs around 06:23–07:05 failures versus 07:23–08:03 successes. Use existing logs/history first and avoid broad SQL.
+- Keep the same-observation semantic-equivalence and delta-write/rollback gates for the shadow, but run them only after the intermittent contention mechanism is narrowed. Preserve every frozen threshold and `prospective_since` value.
+- Treat 412,036,243 bytes (82.41%) as the current point-in-time capacity checkpoint. Do not lower the compactor threshold, manually compact, or add ingestion. Recheck only after a clean log gate.
+- Discovery is current, while TikTok video coverage and crypto-native near-live coverage remain missing. Do not count zero exact-object matches or absent cohort outcomes as negatives.
+- Keep primary 20, controls, exploration cohort and frozen 210 closed. No mint, signature, transfer, trade, paid service or other financial action is authorized.
