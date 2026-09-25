@@ -268,3 +268,13 @@ Do not run the unchanged crypto replay again or increase its 80,000-message budg
 - Recheck capacity only after a clean log gate. Current point-in-time size is 384,642,195 bytes (76.93%), already +20,406,272 bytes since the 05:25 reclaim; measure whether this growth rate persists before changing retention or the compactor threshold.
 - Keep the unchanged 80,000-message crypto replay method rejected. Run 36101180099 remained ~32h33m stale and produced no fresh keyword posts; all zero exact-object output remains `DATA_GAP`.
 - Wait for propagation, adapter-bus, TikTok and MDRTF to finish naturally; do not count starts or technical PASS as restored end-to-end coverage. Preserve the primary 20, controls, exploratory cohort and 210 freeze unchanged.
+
+
+## 2026-09-25 07:42 UTC — family-lane shadow admission gate
+
+- Preserve job 101 unchanged. The read-only shadow core is a promising optimization result, not permission to replace the live function.
+- Next single highest-information test, only after an independent-log window without active recurring timeouts, is a **same-observation write-free equivalence test**: freeze one `as_of` timestamp, compare every family key and scoring field from the shadow with the last successful live output, and fail on any missing/extra key, threshold drift, leader change, backfill-contamination change or evidence-timestamp mutation.
+- After equivalence passes, design a delta-only upsert shadow with an explicit unchanged-row count, deterministic backfill procedure, downstream consumer inventory and one-command rollback to the captured current function definition. Do not deploy, reschedule or disable job 101 before these gates pass.
+- Treat the externally measured 394,767,507 bytes (78.95%) at 07:24 UTC as a point-in-time capacity observation, not a new stable baseline. Do not repeat a size probe while the 20-minute timeout sequence is active.
+- Discovery is current at 07:42 UTC, but TikTok remains two hashtags/zero videos and crypto-native remains ~32h33m stale. Do not convert discovery freshness into exact-object coverage or count zero crypto matches as negatives.
+- Keep primary 20, controls, exploration cohort and frozen 210 closed. No mint, wallet signature, transfer, trade, paid service or other financial action is authorized.
