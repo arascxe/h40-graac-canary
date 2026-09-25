@@ -365,3 +365,16 @@ Decision: **CRITICAL_CAPACITY_96_16_PERCENT / COMPACTOR_PASS_WITHOUT_RECLAIM / P
 - This session made no production, cron, schema, threshold, routing, freeze, or financial change.
 
 Decision: **CAPACITY_RECLAIM_VERIFIED_72_85_PERCENT / POST_COMPACTION_SAFETY_UNPROVEN / SOURCE_DATA_GAP / NO_PRODUCTION_CHANGE**.
+
+
+## 2026-09-25 06:45 UTC — post-compaction family-lane recurrence and capacity regrowth
+
+Automatic production activity after the verified 05:25 UTC reclaim: Supabase stayed project-level `ACTIVE_HEALTHY`, and automatic compactor job 96 continued to complete normally. Nevertheless, the independent log plane recorded SQLSTATE `57014` statement timeouts at 06:25:00 and 06:45:00 UTC. Both failures are explicitly attributed to `select fee100k_private.refresh_family_lane_guarded();`, inside the wide `refresh_family_lane()` aggregation/insert path. Job 96 merely started in the same minute; the evidence does **not** attribute either timeout to compaction. A separate adapter-bus update to `fee100k_http_request_v1` waited about 1.77 seconds for a lock and then acquired it; this is concurrent contention evidence, not proof of a single root cause.
+
+Because multiple live timeouts were present, this Work session followed the fail-fast rule and executed exactly one small read-only probe: database size was **384,642,195 bytes (76.93%)**, up **20,406,272 bytes** from the verified post-compaction 364,235,923-byte checkpoint in roughly 70 minutes, leaving 115,357,805 bytes of free-plan headroom. No further SQL, EXPLAIN, table count, cohort scan, or job rerun was attempted.
+
+Automatic crypto-native run [36101180099](https://github.com/arascxe/h40-graac-canary/actions/runs/36101180099) technically passed and processed the full 80,000-message budget, but its cursor advanced only **29m03.5s**, from 2026-09-23 21:01:43.893 UTC to 21:30:47.437 UTC. At the 2026-09-25 06:04 UTC publication it was about **32h33m15s behind**, with `caught_up_near_live=false`, zero fresh keyword posts and partial/unknown coverage. Reddit remained approval-gated and Bluesky search disabled after 403. Zero exact-object matches are therefore `DATA_GAP`, not a negative economic result.
+
+Propagation, adapter-bus, TikTok and MDRTF workflows were still running during this check; job start or technical PASS is not coverage recovery or economic validation. The primary 20, separate matched controls, exploratory cohort and frozen 210 were not reopened or changed. No independently verified pre-mint pilot, user-wallet creator-fee receipt, or revenue milestone exists.
+
+Work performed in this session: log attribution, one bounded capacity probe, passive GitHub run verification and documentation only. No production job, compactor, cron, schema, threshold, alert routing, freeze, funds or financial action changed. Decision: `POST_COMPACTION_FAMILY_LANE_TIMEOUT_RECURRENCE / CAPACITY_REGROWTH_76_93_PERCENT / CRYPTO_DATA_GAP / NO_PRODUCTION_CHANGE`.
