@@ -238,3 +238,13 @@ Do not run the unchanged crypto replay again or increase its 80,000-message budg
 4. If automatic compaction occurs, verify it through capacity movement, compactor logs, pending-response safety, downstream freshness, and backlog behavior before declaring recovery. Do not infer success from a technical cron PASS.
 5. Do not analyze the primary 20, matched controls, exploration cohort, or frozen 210-launch outcomes until database and source coverage are stable enough to prevent false negatives.
 6. Continue to classify stale crypto-native zero matches as `DATA_GAP`. No mint, signature, transfer, trade, paid service, or other financial action is authorized.
+
+
+### 2026-09-25 03:58 UTC — compactor verification gate
+
+1. Keep the hard capacity hold at **480,808,083 bytes (96.16%)**. Add no ingestion, replay, rerun, cohort scan, collector, or schema work.
+2. Do not manually invoke job 96 or lower its 460 MiB guard. Six technical completions did not reclaim space, and the logs do not prove the rebuild branch executed.
+3. On the next checkpoint, inspect the separate log plane first. If timeout-free, permit at most one tiny database-size probe to determine whether natural growth crossed 482,344,960 bytes and whether the existing guard then reclaimed space.
+4. If size falls, require evidence of actual reclaim plus downstream/pending-response safety before clearing the incident. A one-row cron completion alone is not compaction success.
+5. Treat propagation and adapter coverage as fresh but partial. TikTok video coverage remains missing and the direct API remains `40101`; crypto-native exact-object coverage remains stale. Do not open the primary 20, controls, exploration cohort, or frozen 210 outcomes under these gaps.
+6. No coin mint, wallet signature, transfer, trade, paid service, or other financial action is authorized.
