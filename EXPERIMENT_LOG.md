@@ -397,3 +397,31 @@ The verified 05:25 UTC automatic reclaim may have removed the database pressure,
 - State commit: `aa3fe72e5ca22667006eb8a33f2383469ca2d7af`; next-action commit: `9807961c91bfdd6bd5996108237e57d91795aa2a`; automatic run ID: `36101180099`.
 
 **Decision:** `POST_COMPACTION_FAMILY_LANE_TIMEOUT_RECURRENCE / CAPACITY_REGROWTH_76_93_PERCENT / CRYPTO_DATA_GAP / NO_PRODUCTION_CHANGE`. No pilot, verified creator-fee receipt, or revenue milestone.
+
+
+### 2026-09-25 07:42 UTC — third timeout and external read-only shadow-core review
+
+**Hypothesis**
+The 06:25/06:45 family-lane failures may have been transient; independently produced read-only shadow evidence may isolate a safe optimization without authorizing a production change.
+
+**Method**
+- Read Supabase project state and the independent 06:45–07:42 UTC log plane first.
+- Because the timeout sequence continued, issue zero PostgreSQL SQL, EXPLAIN, cohort query or rerun in this session.
+- Inspect GitHub Actions job states, the current discovery and crypto immutable branch snapshots, commits `281c4515` / `b12a6e8`, and the added read-only `ops/family_lane_shadow_core_v1.sql`.
+- Keep work from the separate 07:24–07:27 Work activity distinct from automatic production and this session.
+
+**Result / test**
+- Job 101 produced a third identical SQLSTATE `57014` at 07:05 UTC in `refresh_family_lane_guarded()` / `refresh_family_lane()`. No other timeout or connection-error family appeared through 07:42 UTC.
+- Separate Work activity—not this session and not automatic production—measured 394,767,507 database bytes (78.95%) and executed a bounded write-free shadow core. It completed under a 15-second statement limit (about 7.2 seconds connector wall time) across 52,639 recent births and 5,322 families.
+- Shadow states were 47 `VETO`, 3,635 `SHADOW`, 1,636 `COPY_SPAM_VETO`, 4 `FAMILY_EXPANSION_WATCH` and 0 `FAMILY_EXPANSION_STRONG`. These results are not admitted prospective cases and do not alter any freeze.
+- Existing indexes reject the simple missing-index hypothesis. The leading explanation is query shape: unnecessary global latest-econ work, repeated backfill checks and unconditional wide upsert. Same-observation semantic equivalence and delta-write/rollback safety remain untested.
+- Discovery snapshot cycle 103 was current at 07:42:30 UTC with 46 items/40 actors, but TikTok bridge still had two hashtags/zero videos. Runs 36095967968, 36097104891, 36098133354 and 36092388913 remained in progress. Crypto run 36101180099 remained coverage-ineligible at ~32h33m stale with zero fresh keyword posts.
+
+**Safety / decision**
+- PASS: this session honored fail-fast with zero PostgreSQL SQL under recurring timeout evidence.
+- PASS: no production function, cron, schema, threshold, alert, cohort, freeze or financial mutation.
+- PASS: the read-only shadow materially narrows the performance hypothesis.
+- HOLD: do not deploy until same-`as_of` field-by-field equivalence, delta-only write behavior, consumer compatibility, deterministic backfill and one-command rollback pass.
+- Production-state commit: `264efd4bce25acde7d25dedf79523d64c8f8f2cb`; next-action commit: `6f62027a3a57f08fb30657992bc9d67fdfefbf3a`; shadow implementation commit: `281c451552c595e2a211ddfcba1f8d05366a1c35`; automatic crypto run ID: `36101180099`.
+
+**Decision:** `FAMILY_LANE_THIRD_TIMEOUT / READ_ONLY_SHADOW_CORE_PASS / EQUIVALENCE_UNPROVEN / DISCOVERY_FRESH_CRYPTO_STALE / PILOT_READY_FALSE`. No verified creator-fee receipt or revenue milestone.
