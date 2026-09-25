@@ -214,3 +214,10 @@ Do not dispatch or enlarge crypto run 36048283198: its 80,000-message pass moved
 Do not treat the clean 73-minute log window as recovery while database use is ~92.25% and three long Actions jobs remain in progress. Add no collector, replay, cadence, schema, compaction or retention mutation. Keep the matured 210 analysis deferred until both database processing and relevant source coverage are demonstrably healthy.
 
 Job 95's exact current schedule, command and active state are now captured at commit `0f1c4ff`, but a pause/cadence change is still forbidden. The next safe step is a narrowly scoped function/dependency export after another clean window, proving durable inputs, deterministic backfill, no synchronous freeze/alert/receipt consumers and exact restoration of the captured state. If that evidence cannot be produced without broad catalog load, remain passive. No financial action is licensed.
+
+
+### 2026-09-25 00:04 UTC — reject job-95 pause; capacity recovery is provisional
+
+Do not pause or slow job 95. Its live wrapper couples canonical outcomes, economic outcomes, probe queueing and turnover model-state refresh; repository definitions for the four children remain incomplete. A pause is not a narrow load-shed and could suppress mature economic evidence. Preserve its 59-second baseline and require full written-table/consumer/backfill closure before reconsideration.
+
+Treat the decline to 419,335,315 bytes (~83.87%) as provisional recovery only; the cause is unproven and storage remains high. Continue passive capacity/log monitoring and do not lower compactor thresholds, delete responses or add ingestion. Do not repeat the unchanged crypto replay: run 36068795919 ended ~26h06m stale and is coverage-ineligible. Three replacement propagation/adapter/TikTok runs are in progress and MDRTF is active; wait for completed snapshots rather than interpreting starts as recovery. Primary 20, controls, exploration 20 and frozen 210 remain closed until healthy end-to-end coverage. No capital action is licensed.
