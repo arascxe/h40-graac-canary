@@ -228,3 +228,13 @@ Treat the decline to 419,335,315 bytes (~83.87%) as provisional recovery only; t
 Withdraw any recovery inference from the earlier quiet window: statement timeouts recurred through 01:05 UTC. Return to log-first observation and send no PostgreSQL probe while recurrence is active. Do not open the matured 210 cohort merely because its clock gate passed; relevant processing and source coverage remain unhealthy.
 
 Do not run the unchanged crypto replay again or increase its 80,000-message budget. Run 36079643535 moved ~26m21s while the wall clock advanced more than two hours and ended ~27h53m stale. The next admissible crypto work must change method class and prove near-live initialization or cursor progress faster than wall time in a bounded offline shadow. Continue waiting for completed propagation, adapter and TikTok snapshots; starts/in-progress states are not coverage recovery. Job 95 remains unchanged and its pause remains rejected. No capital action is licensed.
+
+
+### 2026-09-25 02:56 UTC — immediate capacity gate
+
+1. Treat **478,702,739 bytes / 500,000,000 bytes (95.74%)** as a hard capacity incident. Do not add ingestion, replay, reruns, cohort scans, or new collectors.
+2. Do **not** manually invoke the compactor or lower its 460 MiB threshold. The shared HTTP-response consumer set, exclusive rebuild behavior, and deterministic rollback remain unproven.
+3. On the next checkpoint, read project status and the separate log plane first. If the system is quiet, permit at most one tiny size/status probe to determine whether the existing automatic guard fired naturally.
+4. If automatic compaction occurs, verify it through capacity movement, compactor logs, pending-response safety, downstream freshness, and backlog behavior before declaring recovery. Do not infer success from a technical cron PASS.
+5. Do not analyze the primary 20, matched controls, exploration cohort, or frozen 210-launch outcomes until database and source coverage are stable enough to prevent false negatives.
+6. Continue to classify stale crypto-native zero matches as `DATA_GAP`. No mint, signature, transfer, trade, paid service, or other financial action is authorized.
