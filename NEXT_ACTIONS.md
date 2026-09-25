@@ -310,3 +310,23 @@ Do not run the unchanged crypto replay again or increase its 80,000-message budg
 - Continue classifying crypto exact-object absence, TikTok zero-video output, intermittent Reddit 429s and unqueried cohort results as `DATA_GAP`.
 - Current capacity remains unknown under the fail-fast gate; last verified 412,036,243 bytes at 08:19 UTC. Preserve primary 20, controls, exploration cohort and frozen 210.
 - No mint, signature, transfer, trade, paid service or other financial action is authorized.
+
+
+
+## 2026-09-25 11:19 UTC — incident hold and isolated MDRTF runtime repair gate
+
+- Treat the 10:30–11:19 UTC sequence as an active **multi-family database incident**, not a family-lane-only failure. With 148 startup timeouts, 48 statement timeouts and 34 connection failures still extending through 11:18 UTC, send no PostgreSQL SQL, EXPLAIN, full count, cohort/freeze scan, manual compaction or job rerun until the independent log plane shows a genuinely clean window.
+- Keep every affected result `DATA_GAP`. Source queueing, processing, fast-freeze, discovery, crypto crossover, control/auxiliary crossover, premint, outcome and maintenance families all lost starts or timed out; missing observations must not become negative economic outcomes.
+- Do not manually dispatch, cancel or retry a workflow while Actions creation is stalled. First verify that natural scheduled-run creation resumes after the MDRTF run ended. The declared 15-minute crypto schedule produced no run after 06:03 UTC through 11:19 UTC.
+- The next single highest-information safe development is an **isolated MDRTF dependency smoke gate**, only after scheduled Actions creation resumes and the database log gate is clean:
+  1. on a non-production branch/local runner, install the exact workflow dependencies plus a pinned compatible `aiohttp` version;
+  2. fail fast on `python -c "import aiohttp"`;
+  3. add a no-network test that initializes the NATS aiohttp transport path actually used by the live Pump stream;
+  4. run the existing MDRTF tests and the new transport smoke test;
+  5. inspect the workflow-only diff, dependency compatibility and rollback to the captured pre-change workflow;
+  6. merge no workflow change unless the test fails before and passes after.
+- Do **not** edit `.github/workflows/mdrtf-future-only.yml` during the active incident. Its push paths include the workflow and `mdrtf/**`, so an edit could launch another roughly six-hour run before capacity recovery is established.
+- Preserve the 565,638,843-byte `mdrtf-state` artifact as incident evidence for now. Do not delete it or shorten retention ad hoc. Before a future state-size reduction, prove resume compatibility, deterministic reconstruction, bounded artifact size and rollback to the current archive format.
+- After infrastructure recovery, require a fresh near-live crypto snapshot and source-time evidence before any exact-object conclusion. The current cursor is about 37h48m stale; TikTok has zero videos and discovery is over two hours old. Zero matches remain `DATA_GAP`.
+- Current database capacity is unknown under the fail-fast gate; last verified is 412,036,243 bytes (82.41%) at 08:19 UTC. Preserve primary 20, matched controls, exploration cohort, frozen 210, thresholds and `prospective_since` values.
+- No mint, wallet signature, transfer, trade, paid service or other financial action is authorized.
