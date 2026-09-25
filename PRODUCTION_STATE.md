@@ -393,3 +393,18 @@ Source activity: the discovery branch published a current snapshot at **07:42:30
 Immutable primary 20, matched controls, exploratory cohort and frozen 210 were not opened or changed. No verified independent pre-mint crossover, user-wallet creator-fee receipt or revenue milestone exists.
 
 This session performed log-plane inspection, GitHub/source-state verification and documentation only: **zero PostgreSQL SQL**, no EXPLAIN, rerun, production function, cron, schema, threshold, routing, freeze or financial change. Decision: `FAMILY_LANE_THIRD_TIMEOUT / READ_ONLY_SHADOW_CORE_PASS / EQUIVALENCE_UNPROVEN / DISCOVERY_FRESH_CRYPTO_STALE / PILOT_READY_FALSE`.
+
+
+## 2026-09-25 08:19 UTC — family-lane temporarily recovers unchanged; capacity regrowth continues
+
+Automatic production activity: the independent 07:42–08:19 UTC log window contained no new timeout, SQLSTATE `57014`, connection reset or refusal. A single three-second-bounded read-only probe showed unchanged job 101 succeeded naturally at 07:23, 07:43 and 08:03 UTC in approximately 9.7–10.9 seconds, after the three preceding 120-second failures at 06:25, 06:45 and 07:05. No production function or schedule changed between the failed and successful sequences.
+
+This falsifies the claim that query shape alone deterministically causes the timeout. The wide query remains an avoidable risk and the read-only shadow remains promising, but intermittent concurrent load, cache state or lock/resource contention must be part of the explanation. Do not replace the live function based only on the shadow runtime.
+
+The same bounded probe measured **412,036,243 bytes (82.41%)**, leaving 87,963,757 bytes of free-plan headroom. This is +17,268,736 bytes from the separate 07:24 observation and +47,800,320 bytes from the verified 05:25 post-compaction checkpoint. The recurrent growth is operationally material, but a linear exhaustion forecast is not evidence and is not used as an economic conclusion.
+
+Source activity remained split. Discovery published cycle 127 at **08:19:02 UTC** with 40 items and 35 independent actor hashes. TikTok bridge still reported two hashtags and zero videos. Propagation, adapter-bus, TikTok and MDRTF jobs remained in progress; their long runtime did not prevent current discovery publication, but does not prove complete coverage. No newer crypto-native run exists after 36101180099; its cursor and zero exact-object output remain stale `DATA_GAP`.
+
+The primary 20, matched controls, exploration cohort and frozen 210 were not queried or changed. No verified independent pre-mint crossover, admitted pilot, user-wallet creator-fee receipt or revenue milestone appeared.
+
+This session performed log-first inspection, exactly one bounded read-only size/job-status probe, source verification and documentation. No EXPLAIN, equivalence scan, cohort query, rerun, production function, cron, schema, compactor, threshold, routing, freeze or financial change. Decision: `JOB101_THREE_NATURAL_SUCCESSES / QUERY_SHAPE_NOT_SOLE_CAUSE / CAPACITY_REGROWTH_82_41_PERCENT / CRYPTO_DATA_GAP / PILOT_READY_FALSE`.
