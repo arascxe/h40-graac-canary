@@ -425,3 +425,30 @@ The 06:25/06:45 family-lane failures may have been transient; independently prod
 - Production-state commit: `264efd4bce25acde7d25dedf79523d64c8f8f2cb`; next-action commit: `6f62027a3a57f08fb30657992bc9d67fdfefbf3a`; shadow implementation commit: `281c451552c595e2a211ddfcba1f8d05366a1c35`; automatic crypto run ID: `36101180099`.
 
 **Decision:** `FAMILY_LANE_THIRD_TIMEOUT / READ_ONLY_SHADOW_CORE_PASS / EQUIVALENCE_UNPROVEN / DISCOVERY_FRESH_CRYPTO_STALE / PILOT_READY_FALSE`. No verified creator-fee receipt or revenue milestone.
+
+
+### 2026-09-25 08:19 UTC — unchanged live-function recovery falsifies single-cause diagnosis
+
+**Hypothesis**
+The optimized read-only query shape may explain the three family-lane timeouts by itself; alternatively, unchanged production success would require an intermittent load/contention component.
+
+**Method**
+- Read Supabase project status and the independent 07:42–08:19 UTC log plane first.
+- After a timeout-free window, run exactly one transaction-local three-second-bounded read-only probe for database size and the latest six job-101 records.
+- Inspect current Actions states and immutable discovery/crypto snapshots. Do not run the shadow again, perform equivalence, query cohorts, use EXPLAIN, or mutate/rerun production.
+
+**Result / test**
+- The log window had zero new timeout/57014/connection-error records.
+- Unchanged job 101 succeeded at 07:23, 07:43 and 08:03 UTC in ~9.7–10.9 seconds, following three 120-second failures at 06:25, 06:45 and 07:05. No live function or cadence change occurred.
+- Therefore `QUERY_SHAPE_IS_SOLE_DETERMINISTIC_CAUSE` is rejected. Query shape remains a risk reducer candidate, while intermittent concurrent load, cache or lock/resource contention remains necessary to explain the transition.
+- Database size was **412,036,243 bytes (82.41%)**, +17,268,736 bytes from 07:24 and +47,800,320 bytes from the verified post-compaction checkpoint.
+- Discovery cycle 127 was fresh at 08:19:02 UTC with 40 items/35 actors; TikTok still had two hashtags/zero videos. Runs 36095967968, 36097104891, 36098133354 and 36092388913 remained active. Crypto run 36101180099 remained stale and coverage-ineligible.
+
+**Safety / decision**
+- PASS: log-first gate and one small probe only.
+- PASS: natural job-101 recovery established without intervention.
+- FAIL: durable database/capacity recovery; storage continued to regrow.
+- HOLD: shadow deployment and equivalence remain blocked until failure/success concurrency overlap is isolated and rollback compatibility is proven.
+- Production-state commit: `9f22591babb09bddcb4e49f38c46cdb6c6b1be49`; next-action commit: `201037e9a6c59760a7e4ee79dc900c0ff73a4338`; automatic run IDs in view: `36095967968`, `36097104891`, `36098133354`, `36092388913`, `36101180099`.
+
+**Decision:** `JOB101_THREE_NATURAL_SUCCESSES / QUERY_SHAPE_NOT_SOLE_CAUSE / CAPACITY_REGROWTH_82_41_PERCENT / CRYPTO_DATA_GAP / PILOT_READY_FALSE`. No verified receipt or revenue milestone.
