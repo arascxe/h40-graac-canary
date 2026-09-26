@@ -1,14 +1,7 @@
 name: MDRTF Future-Only Runtime — STOPPED
 
 on:
-  push:
-    paths:
-      - ".github/workflows/mdrtf-future-only.yml"
   workflow_dispatch:
-
-concurrency:
-  group: mdrtf-future-only-runtime
-  cancel-in-progress: true
 
 jobs:
   stopped:
