@@ -1,95 +1,10 @@
-name: Public propagation bridge
+name: Public propagation bridge — STOPPED
 
 on:
-  schedule:
-    - cron: "11 */4 * * *"
   workflow_dispatch:
-  push:
-    paths:
-      - "propagation/**"
-      - ".github/workflows/public-propagation-bridge.yml"
-
-permissions:
-  contents: write
-
-concurrency:
-  group: public-propagation-bridge-v2
-  cancel-in-progress: true
 
 jobs:
-  collect:
+  stopped:
     runs-on: ubuntu-latest
-    timeout-minutes: 330
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Install minimal websocket client
-        run: python3 -m pip install --disable-pip-version-check --quiet "websockets>=13,<16"
-
-      - name: Run near-continuous propagation capture
-        env:
-          GITHUB_TOKEN: ${{ github.token }}
-        shell: bash
-        run: |
-          set -euo pipefail
-
-          publish_snapshot () {
-            rm -rf /tmp/propagation-publish
-            mkdir -p /tmp/propagation-publish
-            cp /tmp/latest.json /tmp/propagation-publish/latest.json
-            cat > /tmp/propagation-publish/README.md <<'EOF'
-          Public, privacy-minimized propagation snapshot generated only from public sources.
-          No private system credentials, private repository data, wallet data, Telegram data,
-          Supabase credentials, user account handles, account IDs, or economic scoring thresholds
-          are stored on this data branch. Public-source actor identifiers are one-way hashed.
-          EOF
-            cd /tmp/propagation-publish
-            git init -q
-            git config user.name "github-actions[bot]"
-            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-            git checkout -q -b propagation-data
-            git add latest.json README.md
-            git commit -q -m "Update public propagation snapshot"
-            git remote add origin "https://x-access-token:${GITHUB_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
-            # GitHub can intermittently reject a branch update with HTTP 500.
-            # Retry *only* the identical validated snapshot; never label missing
-            # observations as collected and never silently skip all failures.
-            pushed=0
-            for attempt in 1 2 3 4; do
-              if git -c http.lowSpeedLimit=1000 -c http.lowSpeedTime=30 push --force -q origin HEAD:propagation-data-v2; then
-                pushed=1
-                break
-              fi
-              echo "::warning::propagation-data-v2 publish attempt ${attempt}/4 failed"
-              if [ "$attempt" -lt 4 ]; then sleep $((attempt * attempt * 3)); fi
-            done
-            if [ "$pushed" -ne 1 ]; then
-              echo "::error::propagation-data-v2 publish failed after 4 attempts; coverage gap must be recorded."
-              exit 1
-            fi
-            cd "$GITHUB_WORKSPACE"
-          }
-
-          # 180 x 90s = 4.5h of near-continuous coverage.
-          # Short windows cut first-object latency without changing the public-only/privacy model.
-          for i in $(seq 1 180); do
-            echo "capture_cycle=$i started=$(date -u +%FT%TZ)"
-            python3 propagation/collect.py --output /tmp/latest.json --duration 90
-
-            python3 - <<'PY'
-          import json
-          p=json.load(open('/tmp/latest.json'))
-          assert p.get('schema') == 'public_social_propagation_v2'
-          privacy=p.get('privacy',{})
-          assert privacy.get('private_system_data') is False
-          assert privacy.get('private_strategy_thresholds') is False
-          assert privacy.get('account_handles_stored') is False
-          assert privacy.get('account_ids_stored') is False
-          print(p['summary'])
-          print(p['source_health'])
-          PY
-
-            publish_snapshot
-            echo "capture_cycle=$i published=$(date -u +%FT%TZ)"
-          done
+      - run: echo "DATA_COLLECTION_STOPPED"
