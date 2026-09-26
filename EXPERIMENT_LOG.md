@@ -625,3 +625,22 @@ The broad event may have subsided after 12:37 UTC or narrowed to one dominant jo
 - NOT TESTED / not claimed — economic validation, verified creator-fee receipt, or full prospective cohort outcomes.
 
 **Runs and commits.** Crypto run `36250897182`; cancelled MDRTF run `36237390508`; active MDRTF run `36253784545`; discovery run `36219916229`; propagation run `36218985404`; TikTok run `36220697287`. Incident report commit `7ab704d88b6a3fe79be96c71f9907c067e1469d1`.
+
+
+## 2026-09-26 18:29 UTC — continuous incident and scheduler-gap audit
+
+**Question.** Did the database incident end, did the 15-minute crypto collector resume, or did any source produce a verifiable pilot/economic result after the prior checkpoint?
+
+**Method.** Queried only the independent Supabase log plane for 17:14–18:29 UTC; grouped `57014` by job family and counted connection/protocol failures. Compared the crypto workflow's declared 07/22/37/52 schedule with actual GitHub runs. Read current data-branch snapshots and MDRTF job/artifact state. No PostgreSQL SQL was sent.
+
+**Result.** The incident remained active through 18:28:27 UTC with 85 `57014` and 55 connection/protocol errors. Crypto created no run after 15:08 UTC, missing 13 nominal slots by 18:29; its snapshot and three empty exact-object observations were unchanged. Discovery/propagation completed, TikTok video coverage stayed zero, and MDRTF remained in collection on unchanged code. No main/control/discovery-cohort result is valid under this coverage state; no pilot or verified fee receipt.
+
+**Tests / safety.**
+- PASS — exact-window log-plane aggregation and affected-family split.
+- PASS — declared-schedule versus actual-run comparison.
+- PASS — data-branch freshness and MDRTF state inspection.
+- PASS — zero PostgreSQL SQL, reruns, production changes, or freeze/cohort mutations.
+- DEFERRED — `aiohttp` fail-before/pass-after repair until database and current MDRTF gates are clear.
+- NOT CLAIMED — economic validation or negative cohort outcome.
+
+**Runs and commit.** Crypto `36250897182`; MDRTF `36253784545`; discovery `36244389816`; propagation `36243745457`; TikTok `36244902643`. Incident report commit `b0265630123c5873c7a642ecbefc5a5cbf95753a`.
