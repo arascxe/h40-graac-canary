@@ -1,14 +1,7 @@
 name: TikTok CC browser adapter V2 — STOPPED
 
 on:
-  push:
-    paths:
-      - ".github/workflows/tiktok-cc-browser-adapter-v2.yml"
   workflow_dispatch:
-
-concurrency:
-  group: tiktok-cc-browser-adapter-v2
-  cancel-in-progress: true
 
 jobs:
   stopped:
