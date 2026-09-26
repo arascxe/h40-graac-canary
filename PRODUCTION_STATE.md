@@ -520,3 +520,11 @@ Decision: `DB_INCIDENT_INTENSIFIED / MULTI_FAMILY_NOT_LOCALIZED / NEW_ACTIONS_RU
 - MDRTF [36253784545](https://github.com/arascxe/h40-graac-canary/actions/runs/36253784545) remained in the 208-cut collection step on unchanged broken-dependency code, with no artifact or runtime-health result.
 - Main 20, separate controls, discovery cohort, frozen 210, thresholds, and past evidence remain unchanged. No pilot or verified creator-fee receipt.
 - Full checkpoint: [ops/incident_2026-09-26_1829.md](https://github.com/arascxe/h40-graac-canary/blob/main/ops/incident_2026-09-26_1829.md) (commit `b0265630123c5873c7a642ecbefc5a5cbf95753a`).
+
+## 2026-09-26 19:53 UTC — all FEE100K collection stopped
+
+The user explicitly ordered every active FEE100K data collector stopped. A separate Work session replaced all 13 GitHub Actions workflows with manual-only `workflow_dispatch` stubs whose sole action is `DATA_COLLECTION_STOPPED`, and cancelled the four long-running collectors (TikTok `36265756308`, pre-mint `36265403497`, propagation `36265159115`, MDRTF `36253784545`). This session re-read every workflow from `main` and verified there is no schedule, push trigger, network call, database call, or collection command.
+
+Before the stop, the independent Supabase log plane for 18:29–19:50 UTC still showed an active multi-family incident: 87 SQLSTATE `57014`, 45 `08006`, and 22 `08P01`, with the last error at 19:37:18 UTC. Following the fail-fast rule, this session sent zero PostgreSQL SQL. It then paused project `iocirjhwncnhjanawgsm` through the control plane; Supabase returned success and immediate verification reported `PAUSING`. No cron, schema, threshold, compactor, alert, freeze, cohort, or data row was modified.
+
+Scientific state is preserved. Missing observations after shutdown are intentional `DATA_GAP`, not negative evidence. There is no verified independent pre-mint exact-object crossover, pilot, user-wallet creator-fee receipt, or revenue milestone. Full audit: [FEE100K_FULL_STOP_2026-09-26T1953Z](ops/FEE100K_FULL_STOP_2026-09-26T1953Z.md). Decision: `ALL_DATA_COLLECTION_STOPPED / SUPABASE_PAUSING / DATA_GAP_PRESERVED / PILOT_READY_FALSE`.
