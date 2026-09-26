@@ -605,3 +605,23 @@ The broad event may have subsided after 12:37 UTC or narrowed to one dominant jo
 **Decision**
 
 `DB_INCIDENT_INTENSIFIED / MULTI_FAMILY_NOT_LOCALIZED / NEW_ACTIONS_RUNNING_NOT_HEALTH_PROOF / COVERAGE_INCOMPLETE / DATA_GAP / NO_PRODUCTION_CHANGE`. The MDRTF dependency smoke test remains deferred. No pilot, verified creator-fee receipt or revenue milestone.
+
+
+## 2026-09-26 17:14 UTC — active incident classification and source-freshness audit
+
+**Question.** Did the system recover sufficiently to resume cohort/fee analysis, and did the latest automated runs produce an independently verifiable exact-object pre-mint crossover or economic validation?
+
+**Method.** Read the independent Supabase log plane first for 2026-09-26 15:45–17:14 UTC; grouped `57014` by pg_cron query family and counted `08006`/`08P01`. Because multiple errors remained active, sent zero PostgreSQL SQL. Inspected GitHub Actions jobs/logs/artifacts and the latest immutable data-branch snapshots. Manually audited every crypto observation's exact-object fields and timestamps. Did not query or mutate freezes/cohorts.
+
+**Result.** Incident remains active: 117 `57014`, 52 `08006`, 21 `08P01`; last error 17:13:33 UTC. The crypto run advanced 80,000 messages across only 23m38s of source time and remained about 24h32m behind publication. Its three same-actor Mastodon observations all had `linked_object_urls=[]` and `has_exact_outbound_object=false`; no pre-mint crossover was eligible for mint-time verification. Discovery/propagation published current snapshots; TikTok remained at zero videos. MDRTF retained the missing-`aiohttp` stream failure and the cancelled run emitted a 568,304,281-byte artifact. No pilot, verified net creator-fee receipt, or revenue milestone.
+
+**Tests / safety checks.**
+- PASS — independent log-plane aggregation with exact time bounds.
+- PASS — fail-fast database gate: zero PostgreSQL SQL, no rerun, no capacity probe.
+- PASS — crypto snapshot schema/health inspection and manual audit of all 3 observations.
+- PASS — GitHub Actions run/job/artifact inspection.
+- PASS — immutable main 20, matched controls, discovery cohort, frozen 210, thresholds, and historical evidence preserved.
+- DEFERRED — isolated `aiohttp` fail-before/pass-after repair, because the database incident is active and replacement MDRTF run is still executing unchanged code.
+- NOT TESTED / not claimed — economic validation, verified creator-fee receipt, or full prospective cohort outcomes.
+
+**Runs and commits.** Crypto run `36250897182`; cancelled MDRTF run `36237390508`; active MDRTF run `36253784545`; discovery run `36219916229`; propagation run `36218985404`; TikTok run `36220697287`. Incident report commit `7ab704d88b6a3fe79be96c71f9907c067e1469d1`.
