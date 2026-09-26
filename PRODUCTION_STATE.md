@@ -508,3 +508,15 @@ Decision: `DB_INCIDENT_INTENSIFIED / MULTI_FAMILY_NOT_LOCALIZED / NEW_ACTIONS_RU
 - MDRTF run [36237390508](https://github.com/arascxe/h40-graac-canary/actions/runs/36237390508) was cancelled, failed runtime health, retained the missing-`aiohttp` Pump stream error, and emitted a 568,304,281-byte artifact. Replacement run [36253784545](https://github.com/arascxe/h40-graac-canary/actions/runs/36253784545) is still collecting on unchanged code; start is not a pass.
 - Main 20, separate matched controls, discovery cohort, and frozen 210 remain unchanged. No verified creator-fee receipt or revenue milestone.
 - Full incident checkpoint: [ops/incident_2026-09-26_1714.md](https://github.com/arascxe/h40-graac-canary/blob/main/ops/incident_2026-09-26_1714.md) (report commit `7ab704d88b6a3fe79be96c71f9907c067e1469d1`).
+
+
+## Checkpoint — 2026-09-26 18:29 UTC
+
+- The database incident continued without a clean boundary. In 17:14–18:29 UTC the independent log plane recorded **85 `57014`**, **35 `08006`**, and **20 `08P01`**; last error 18:28:27 UTC.
+- Affected work remained broad: discovery adapter 31, process cycle 27, turnover maintenance 8, premint refresh 7, family lane 2, crypto crossover 1, retention 1, plus 8 exporter timeouts. Outputs are `DATA_GAP`.
+- Database fail-fast remained closed: zero PostgreSQL SQL, no capacity probe, cohort query, `EXPLAIN`, full count, compaction, or rerun. Current capacity is unknown.
+- The 15-minute crypto workflow has not created a run since [36250897182](https://github.com/arascxe/h40-graac-canary/actions/runs/36250897182) at 15:08 UTC. By 18:29 UTC more than three hours / 13 nominal slots were missing. Its unchanged snapshot remains roughly one day behind, `caught_up_near_live=false`, with no exact-object URLs.
+- Discovery last published 38 items / 34 actors at 17:16 UTC; propagation 81 / 79 at 17:42 UTC; TikTok remained two hashtags / zero videos at 17:14 UTC. Technical publication is not economic validation.
+- MDRTF [36253784545](https://github.com/arascxe/h40-graac-canary/actions/runs/36253784545) remained in the 208-cut collection step on unchanged broken-dependency code, with no artifact or runtime-health result.
+- Main 20, separate controls, discovery cohort, frozen 210, thresholds, and past evidence remain unchanged. No pilot or verified creator-fee receipt.
+- Full checkpoint: [ops/incident_2026-09-26_1829.md](https://github.com/arascxe/h40-graac-canary/blob/main/ops/incident_2026-09-26_1829.md) (commit `b0265630123c5873c7a642ecbefc5a5cbf95753a`).
