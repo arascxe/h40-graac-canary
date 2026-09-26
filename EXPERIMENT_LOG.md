@@ -644,3 +644,30 @@ The broad event may have subsided after 12:37 UTC or narrowed to one dominant jo
 - NOT CLAIMED — economic validation or negative cohort outcome.
 
 **Runs and commit.** Crypto `36250897182`; MDRTF `36253784545`; discovery `36244389816`; propagation `36243745457`; TikTok `36244902643`. Incident report commit `b0265630123c5873c7a642ecbefc5a5cbf95753a`.
+
+## 2026-09-26 19:53 UTC — complete collection shutdown
+
+**Hypothesis.** Replacing every GitHub collector with a no-op manual-only workflow and pausing the Supabase project will stop all FEE100K data acquisition without mutating immutable research evidence.
+
+**Method.**
+- Read the independent Supabase log plane first for 18:29–19:50 UTC.
+- Because multi-family errors were active, send zero PostgreSQL SQL, EXPLAIN, capacity/cohort query, or rerun.
+- Re-read every file under `.github/workflows` from `main`.
+- Verify cancellation/completion state of the active collector runs.
+- Pause Supabase project `iocirjhwncnhjanawgsm` through the reversible control-plane operation.
+- Preserve all freezes, cohorts, thresholds, timestamps, and historical evidence.
+
+**Result / tests.**
+- PRE-STOP INCIDENT: 87 `57014`, 45 `08006`, 22 `08P01`; last observed error 19:37:18.436 UTC.
+- PASS: all 13 workflow files are `workflow_dispatch`-only no-op stubs that emit `DATA_COLLECTION_STOPPED`; no schedule/push/network/database/collector command remains.
+- PASS: active TikTok `36265756308`, pre-mint `36265403497`, propagation `36265159115`, and MDRTF `36253784545` runs are cancelled.
+- PASS: stop-gate runs `36267334548`, `36267343550`, `36267347783`, and `36267353184` completed successfully.
+- PASS/PENDING CONTROL PLANE: Supabase pause returned `success=true`; immediate status was `PAUSING`.
+- PASS: zero PostgreSQL SQL, no schema/cron/compactor/threshold/alert/freeze/cohort/data mutation.
+- NOT CLAIMED: exact-object crossover, prospective economic outcome, pilot, creator-fee receipt, or revenue milestone.
+
+**Responsibility split.** The separate Work session made the GitHub workflow stop commits and triggered cancellation gates. This automation session verified those changes, read the independent logs, paused Supabase, and wrote the permanent record.
+
+**Commits / runs.** Shutdown report commit `574b4647983d1718b98902e8dc3d8773e3e7f260`; representative stop commits `c1f93dd567ff06fcaae72f750b2aee198ca75966`, `96728e2a03fc7ca4896611ff6b7ffb7379ea4ea1`, `8c355d66b5e583cd3d640042de180c47f33e1f3e`, `64a0824d5a9385f2a9ba378fd67c988f3af7254c`, `3e98ec7bd782c7d5da1a2f29defc8e855424419c`, `8d93b12ad6c69d70b3fda33fe1e9591c4b99a69d`, `135de1632726b83dff731fcd0f374265808765c2`.
+
+**Decision.** `ALL_DATA_COLLECTION_STOPPED / SUPABASE_PAUSING / DATA_GAP_PRESERVED / NO_RESUME_WITHOUT_EXPLICIT_USER_REQUEST`.
