@@ -1,7 +1,14 @@
 name: Public propagation bridge — STOPPED
 
 on:
+  push:
+    paths:
+      - ".github/workflows/public-propagation-bridge.yml"
   workflow_dispatch:
+
+concurrency:
+  group: public-propagation-bridge-v2
+  cancel-in-progress: true
 
 jobs:
   stopped:
