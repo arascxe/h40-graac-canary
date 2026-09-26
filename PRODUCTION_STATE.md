@@ -496,3 +496,15 @@ Crypto run 36130856236 remained the latest completed snapshot. Its near-live cur
 This Work session performed only status/log/Actions inspection and the versioned phase comparison in [`ops/incident_2026-09-25_1357.md`](https://github.com/arascxe/h40-graac-canary/blob/main/ops/incident_2026-09-25_1357.md), commit `1793dbc77813f45b25eb0e665914f2a92d770a94`. It sent **zero PostgreSQL SQL**, no EXPLAIN, capacity query, cohort/freeze scan, rerun or compaction. Current database size is unknown; last verified remains 412,036,243 bytes (82.41%) at 08:19 UTC. Primary 20, matched controls, exploration cohort and frozen 210 remain unchanged.
 
 Decision: `DB_INCIDENT_INTENSIFIED / MULTI_FAMILY_NOT_LOCALIZED / NEW_ACTIONS_RUNNING_NOT_HEALTH_PROOF / COVERAGE_INCOMPLETE / DATA_GAP / NO_PRODUCTION_CHANGE / PILOT_READY_FALSE`. No verified creator-fee receipt or revenue milestone exists.
+
+
+## Checkpoint — 2026-09-26 17:14 UTC
+
+- Supabase control status is `ACTIVE_HEALTHY`, but the independent log plane confirms an active broad incident in 15:45–17:14 UTC: **117 `57014`**, **52 `08006`**, and **21 `08P01`**; the final error was observed at 17:13:33 UTC.
+- The 96 pg_cron timeouts affected discovery adapter (37), process cycle (28), outcome probe (10), turnover maintenance (7), premint refresh (6), crypto crossover (4), family lane (1), forensic maintenance (1), retention (1), and one unclassified invocation. Missing outputs across these families are `DATA_GAP`.
+- Fail-fast enforced: this session sent zero PostgreSQL SQL and did not measure capacity. Last durable capacity remains 412,036,243 bytes / 500 MB (82.41%) at 2026-09-25 08:19 UTC.
+- Crypto run [36250897182](https://github.com/arascxe/h40-graac-canary/actions/runs/36250897182) technically passed but its Jetstream cursor ended at 2026-09-25 14:36:48 UTC, about 24h32m behind publication. `caught_up_near_live=false`, coverage is `PARTIAL_OR_BASELINE_UNKNOWN`, and all three observations had empty exact-object URL sets. No independently verifiable pre-mint crossover or pilot.
+- Discovery and propagation were current at 17:15/17:14 UTC, but TikTok still published two hashtags and zero videos. These source snapshots are not economic outcomes.
+- MDRTF run [36237390508](https://github.com/arascxe/h40-graac-canary/actions/runs/36237390508) was cancelled, failed runtime health, retained the missing-`aiohttp` Pump stream error, and emitted a 568,304,281-byte artifact. Replacement run [36253784545](https://github.com/arascxe/h40-graac-canary/actions/runs/36253784545) is still collecting on unchanged code; start is not a pass.
+- Main 20, separate matched controls, discovery cohort, and frozen 210 remain unchanged. No verified creator-fee receipt or revenue milestone.
+- Full incident checkpoint: [ops/incident_2026-09-26_1714.md](https://github.com/arascxe/h40-graac-canary/blob/main/ops/incident_2026-09-26_1714.md) (report commit `7ab704d88b6a3fe79be96c71f9907c067e1469d1`).
