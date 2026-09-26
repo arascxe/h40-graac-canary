@@ -375,3 +375,15 @@ Do not run the unchanged crypto replay again or increase its 80,000-message budg
 4. Let MDRTF run `36253784545` end naturally; do not cancel, overlap, or repeat it.
 5. After both gates are clean—database log window healthy and current MDRTF ended—perform only the isolated fail-before/pass-after `aiohttp` transport smoke test and pinned dependency repair. Roll back by reverting that single workflow/dependency commit.
 6. Only then use one bounded read-only capacity probe and resume main-20/control/discovery-cohort outcome analysis without changing freezes.
+
+## 2026-09-26 19:53 UTC — shutdown hold (highest priority)
+
+- Keep all 13 GitHub Actions workflows manual-only and stopped.
+- Do not dispatch, restore, reschedule, or re-enable any collector without a new explicit user instruction.
+- Keep Supabase project `iocirjhwncnhjanawgsm` paused. Restore is the rollback, but it is not authorized until the user explicitly requests resumption.
+- Do not run SQL, EXPLAIN, capacity/cohort queries, cron reruns, compaction, backfill, or economic analysis while stopped.
+- Preserve the main 20, matched controls, discovery cohort, frozen 210, thresholds, `prospective_since`, and all historical evidence exactly as they were.
+- Classify every missing post-stop observation as intentional `DATA_GAP`; never convert it into a negative economic result.
+- Before any future restart, require a written dependency map, capacity budget, data-integrity check, backwards-compatibility plan, and one-command rollback for each service family.
+
+Verification and rollback record: [ops/FEE100K_FULL_STOP_2026-09-26T1953Z.md](ops/FEE100K_FULL_STOP_2026-09-26T1953Z.md).
