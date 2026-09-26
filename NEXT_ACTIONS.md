@@ -355,3 +355,13 @@ Do not run the unchanged crypto replay again or increase its 80,000-message budg
 - The next single safe development remains the isolated MDRTF `aiohttp` fail-before/pass-after transport test, but do not execute or merge it until the database log plane is clean and the current MDRTF run ends. Preserve the workflow rollback and artifact-resume gates.
 - Current database capacity is unknown; last verified is 412,036,243 bytes (82.41%) at 08:19 UTC. Preserve primary 20, matched controls, exploration cohort, frozen 210, thresholds and `prospective_since`.
 - No mint, wallet signature, transfer, trade, paid service or other financial action is authorized.
+
+
+## Next safety gate — 2026-09-26 17:14 UTC
+
+1. Keep the database fail-fast gate closed while multiple `57014`/connection errors remain active. Use the independent log plane only; do not run PostgreSQL SQL, `EXPLAIN`, full counts, manual compaction, or job reruns.
+2. After a genuinely clean log window, use one bounded read-only capacity probe. Do not infer capacity from project `ACTIVE_HEALTHY` status.
+3. Do not interpret crypto zero matches as negative evidence until Jetstream is near-live and the Reddit/Bluesky baseline gaps are explicitly resolved. Manually verify every non-empty exact-object URL against publication and mint timestamps.
+4. Let MDRTF run [36253784545](https://github.com/arascxe/h40-graac-canary/actions/runs/36253784545) end naturally. Do not repeat the unchanged broken run.
+5. Only after the database gate is open and the current MDRTF run has ended, execute the already selected single bounded development: an isolated fail-before/pass-after Pump realtime transport smoke test, pin/install `aiohttp` in the workflow, verify one public connection without writing production state, then validate artifact growth. Rollback is the single dependency/workflow commit; no schema, cron, alert, threshold, or cohort change is required.
+6. Preserve all freezes and cohort membership. Main 20, separate controls, discovery cohort, and frozen 210 may be re-evaluated only under healthy coverage; missing data stays `DATA_GAP`.
