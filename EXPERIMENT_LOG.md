@@ -670,7 +670,7 @@ The broad event may have subsided after 12:37 UTC or narrowed to one dominant jo
 
 **Commits / runs.** Shutdown report commit `574b4647983d1718b98902e8dc3d8773e3e7f260`; representative stop commits `c1f93dd567ff06fcaae72f750b2aee198ca75966`, `96728e2a03fc7ca4896611ff6b7ffb7379ea4ea1`, `8c355d66b5e583cd3d640042de180c47f33e1f3e`, `64a0824d5a9385f2a9ba378fd67c988f3af7254c`, `3e98ec7bd782c7d5da1a2f29defc8e855424419c`, `8d93b12ad6c69d70b3fda33fe1e9591c4b99a69d`, `135de1632726b83dff731fcd0f374265808765c2`.
 
-**Decision.** `ALL_DATA_COLLECTION_STOPPED / SUPABASE_PAUSING / DATA_GAP_PRESERVED / NO_RESUME_WITHOUT_EXPLICIT_USER_REQUEST`.
+**Decision.** `ALL_DATA_COLLECTION_STOPPED / SUPABASE_INACTIVE / DATA_GAP_PRESERVED / NO_RESUME_WITHOUT_EXPLICIT_USER_REQUEST`.
 
 
 ### 2026-09-26 19:55 UTC — shutdown verification addendum
@@ -678,5 +678,5 @@ The broad event may have subsided after 12:37 UTC or narrowed to one dominant jo
 - PASS: final Actions inventory had zero queued/in-progress runs; only completed stop stubs were newest.
 - PASS: automations `6aa584adb14c81919b62d7342e95eaf4`, `6ab42a0f629c819197e9f28f46417bbe`, and `6aaac8efff748191b41e5280bb0943d4` were disabled.
 - INFO: `FEE100K Attention Watch` returned “task is no longer available” and therefore could not remain runnable.
-- PENDING CONTROL PLANE: Supabase status remained `PAUSING`; the pause request had returned `success=true`.
+- PASS: Supabase pause returned `success=true`; final control-plane verification reported `INACTIVE`.
 - PASS: no PostgreSQL SQL, production data mutation, or financial action.
