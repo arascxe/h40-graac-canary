@@ -365,3 +365,13 @@ Do not run the unchanged crypto replay again or increase its 80,000-message budg
 4. Let MDRTF run [36253784545](https://github.com/arascxe/h40-graac-canary/actions/runs/36253784545) end naturally. Do not repeat the unchanged broken run.
 5. Only after the database gate is open and the current MDRTF run has ended, execute the already selected single bounded development: an isolated fail-before/pass-after Pump realtime transport smoke test, pin/install `aiohttp` in the workflow, verify one public connection without writing production state, then validate artifact growth. Rollback is the single dependency/workflow commit; no schema, cron, alert, threshold, or cohort change is required.
 6. Preserve all freezes and cohort membership. Main 20, separate controls, discovery cohort, and frozen 210 may be re-evaluated only under healthy coverage; missing data stays `DATA_GAP`.
+
+
+## Continuation gate — 2026-09-26 18:29 UTC
+
+1. Keep all PostgreSQL work blocked while the independent log plane shows active multi-family `57014` plus connection/protocol errors.
+2. Do not manually dispatch the missing crypto schedule slots. Preserve the gap; a rerun cannot recreate point-in-time observations and would add load.
+3. Treat crypto exact-object zero as `DATA_GAP` until both a new scheduled run exists and its cursor is near-live with known baseline coverage.
+4. Let MDRTF run `36253784545` end naturally; do not cancel, overlap, or repeat it.
+5. After both gates are clean—database log window healthy and current MDRTF ended—perform only the isolated fail-before/pass-after `aiohttp` transport smoke test and pinned dependency repair. Roll back by reverting that single workflow/dependency commit.
+6. Only then use one bounded read-only capacity probe and resume main-20/control/discovery-cohort outcome analysis without changing freezes.
